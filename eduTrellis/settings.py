@@ -15,7 +15,7 @@ SECRET_KEY = "django-insecure-h^l!e0kvn8ore3fikloht@x^6nlif_jbgg$=x=!0b(v-lu#ev_
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['']
+ALLOWED_HOSTS = ['*']
 
 # --------------------
 # APPLICATIONS
@@ -185,4 +185,5 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CSRF_TRUSTED_ORIGINS = [
     "https://ganeshsirclasses.online",
     "https://www.ganeshsirclasses.online",
+    "https://web-production-ab46.up.railway.app",
 ]
