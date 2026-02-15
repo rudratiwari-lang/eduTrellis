@@ -157,7 +157,7 @@ CSRF_USE_SESSIONS = False
 
 
 # PWA Settings
-PWA_APP_NAME = 'EduTrellis'
+PWA_APP_NAME = 'advance'
 PWA_APP_DESCRIPTION = 'Premium online education platform'
 PWA_APP_THEME_COLOR = '#c7212f'
 PWA_APP_BACKGROUND_COLOR = '#ffffff'
