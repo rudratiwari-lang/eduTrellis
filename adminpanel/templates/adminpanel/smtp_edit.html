@@ -1,0 +1,174 @@
+{% extends 'admin_dashboard.html' %}
+{% load static %}
+
+{% block title %}Edit SMTP Configuration{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <div class="nav-buttons">
+        <a href="{% url 'smtp_configuration' %}" class="btn">
+            <span>←</span> Back to SMTP Configurations
+        </a>
+    </div>
+
+    <h1 class="h1">Edit SMTP Configuration</h1>
+    <p class="small">Modify the email server settings for OTPs and notifications</p>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" onsubmit="showLoading(this)">
+        {% csrf_token %}
+
+        <!-- Basic Information -->
+        <div class="panel">
+            <h3 class="panel-title">Basic Information</h3>
+            <div class="grid">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="name">Configuration Name *</label>
+                        <input type="text" id="name" name="name" required 
+                               placeholder="e.g., Gmail SMTP, Office 365" 
+                               value="{{ config.name }}">
+                        <div class="help-text">Friendly name to identify this configuration</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="email_backend">Email Backend *</label>
+                        <select id="email_backend" name="email_backend" required>
+                            <option value="django.core.mail.backends.smtp.EmailBackend"
+                                {% if config.email_backend == 'django.core.mail.backends.smtp.EmailBackend' %}selected{% endif %}>
+                                SMTP Backend (Production)
+                            </option>
+                            <option value="django.core.mail.backends.console.EmailBackend"
+                                {% if config.email_backend == 'django.core.mail.backends.console.EmailBackend' %}selected{% endif %}>
+                                Console Backend (Development)
+                            </option>
+                        </select>
+                        <div class="help-text">Choose SMTP for production, Console for testing</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Settings -->
+        <div class="panel">
+            <h3 class="panel-title">Server Settings</h3>
+            <div class="grid">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="email_host">SMTP Host *</label>
+                        <input type="text" id="email_host" name="email_host" required 
+                               placeholder="smtp.gmail.com" 
+                               value="{{ config.email_host }}">
+                        <div class="help-text">Common hosts: smtp.gmail.com, smtp.outlook.com, smtp.yahoo.com</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="email_port">Port *</label>
+                        <input type="number" id="email_port" name="email_port" required 
+                               min="1" max="65535" 
+                               value="{{ config.email_port }}">
+                        <div class="help-text">TLS: 587, SSL: 465, Non-encrypted: 25</div>
+                    </div>
+                </div>
+                <div class="col-12" style="display: flex; gap: 20px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <input type="checkbox" name="email_use_tls" {% if config.email_use_tls %}checked{% endif %}>
+                        Use TLS (Recommended)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <input type="checkbox" name="email_use_ssl" {% if config.email_use_ssl %}checked{% endif %}>
+                        Use SSL
+                    </label>
+                </div>
+                <div class="col-12">
+                    <div class="help-text">Enable TLS for port 587 or SSL for port 465</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authentication -->
+        <div class="panel">
+            <h3 class="panel-title">Authentication</h3>
+            <div class="grid">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="email_host_user">Email Address *</label>
+                        <input type="email" id="email_host_user" name="email_host_user" required 
+                               placeholder="your.email@gmail.com"
+                               value="{{ config.email_host_user }}">
+                        <div class="help-text">Email address used for authentication</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="email_host_password">Password/App Password *</label>
+                        <input type="password" id="email_host_password" name="email_host_password" required 
+                               placeholder="Enter password or app password">
+                        <div class="help-text">For Gmail: Use App Password if 2FA is enabled</div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="default_from_email">Default From Email *</label>
+                        <input type="email" id="default_from_email" name="default_from_email" required 
+                               placeholder="noreply@yourdomain.com"
+                               value="{{ config.default_from_email }}">
+                        <div class="help-text">Default sender address for outgoing emails</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="panel">
+            <h3 class="panel-title">Configuration Status</h3>
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="is_active" {% if config.is_active %}checked{% endif %}>
+                <strong>Set as Active Configuration</strong>
+            </label>
+            <div class="help-text" style="margin-top: 8px;">
+                Only one SMTP configuration can be active at a time. This will deactivate other configurations.
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-success">
+                <span class="spinner" style="display: none;"></span>
+                <span class="btn-text">Update Configuration</span>
+            </button>
+            <a href="{% url 'smtp_configuration' %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function showLoading(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    const spinner = btn.querySelector('.spinner');
+    const text = btn.querySelector('.btn-text');
+    
+    spinner.style.display = 'inline-block';
+    text.textContent = 'Updating...';
+    btn.classList.add('btn-loading');
+}
+
+// Auto-fill default_from_email when email_host_user changes if empty
+document.getElementById('email_host_user').addEventListener('input', function() {
+    const fromEmail = document.getElementById('default_from_email');
+    if (!fromEmail.value) {
+        fromEmail.value = this.value;
+    }
+});
+</script>
+{% endblock %}

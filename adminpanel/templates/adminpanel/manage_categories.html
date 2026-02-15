@@ -1,0 +1,163 @@
+{% extends 'admin_dashboard.html' %}
+{% load static %}
+
+{% block title %}Manage Categories{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <div class="nav-buttons">
+        <a href="{% url 'admindashboard' %}" class="btn">
+            <span>←</span> Back to Dashboard
+        </a>
+        <a href="{% url 'create_category' %}" class="btn btn-primary">
+            <span>+</span> Add New Category
+        </a>
+    </div>
+
+    <h1 class="h1">Manage Categories</h1>
+    <p class="small">Organize and control your course categories</p>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Analytics Cards -->
+    <div class="analytics-grid">
+        <div class="analytics-card">
+            <div class="analytics-icon icon-total">📂</div>
+            <div class="analytics-value">{{ total_categories }}</div>
+            <div class="analytics-label">Total Categories</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-active">✅</div>
+            <div class="analytics-value">{{ total_categories }}</div>
+            <div class="analytics-label">Active Categories</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-usage">🎓</div>
+            <div class="analytics-value">0</div>
+            <div class="analytics-label">Courses</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-discount">📈</div>
+            <div class="analytics-value">{{ categories.paginator.num_pages|default:1 }}</div>
+            <div class="analytics-label">Pages</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="admin-card-hd">
+            <h3 class="panel-title">Category Management</h3>
+            <div class="admin-filters">
+                <input type="text" class="admin-filter-input" placeholder="Search categories..." id="categorySearch">
+                <button class="admin-filter-btn" onclick="searchCategories()">Search</button>
+            </div>
+        </div>
+
+        {% if categories %}
+            <div class="admin-card-bd">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Category Name</th>
+                            <th>Slug</th>
+                            <th>Description</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                            <tr>
+                                <td><strong>{{ category.id }}</strong></td>
+                                <td>
+                                    <div class="coupon-code">{{ category.name }}</div>
+                                </td>
+                                <td>
+                                    <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{ category.slug }}</code>
+                                </td>
+                                <td>
+                                    {% if category.description %}
+                                        {{ category.description|truncatewords:8 }}
+                                    {% else %}
+                                        <span style="color: var(--admin-muted); font-style: italic;">No description</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="font-size: 13px;">{{ category.created_at|date:"M d, Y" }}</div>
+                                    <div style="font-size: 11px; color: var(--admin-muted);">{{ category.created_at|date:"g:i A" }}</div>
+                                </td>
+                                <td>
+                                    <div class="row-actions">
+                                        <a href="{% url 'edit_category' category.id %}" class="btn btn-primary" title="Edit Category">Edit</a>
+                                        <a href="{% url 'delete_category' category.id %}" class="btn btn-danger" title="Delete Category">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if categories.has_other_pages %}
+                <div style="display: flex; justify-content: center; margin-top: 20px; gap: 8px;">
+                    {% if categories.has_previous %}
+                        <a href="?page=1" class="btn">First</a>
+                        <a href="?page={{ categories.previous_page_number }}" class="btn">Previous</a>
+                    {% endif %}
+
+                    {% for num in categories.paginator.page_range %}
+                        {% if categories.number == num %}
+                            <span class="btn btn-primary">{{ num }}</span>
+                        {% elif num > categories.number|add:'-3' and num < categories.number|add:'3' %}
+                            <a href="?page={{ num }}" class="btn">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if categories.has_next %}
+                        <a href="?page={{ categories.next_page_number }}" class="btn">Next</a>
+                        <a href="?page={{ categories.paginator.num_pages }}" class="btn">Last</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <h3>No Categories Found</h3>
+                <p>Start by creating your first category to organize your courses.</p>
+                <div style="margin-top: 20px;">
+                    <a href="{% url 'create_category' %}" class="btn btn-primary">Create Your First Category</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function searchCategories() {
+    const searchTerm = document.getElementById('categorySearch').value.toLowerCase();
+    const rows = document.querySelectorAll('.admin-table tbody tr');
+    
+    rows.forEach(row => {
+        const categoryName = row.cells[1].textContent.toLowerCase();
+        const description = row.cells[3].textContent.toLowerCase();
+        
+        if (categoryName.includes(searchTerm) || description.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Real-time search
+document.getElementById('categorySearch').addEventListener('keyup', searchCategories);
+</script>
+{% endblock %}

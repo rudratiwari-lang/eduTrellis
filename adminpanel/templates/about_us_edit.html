@@ -1,0 +1,237 @@
+{% extends 'admin_dashboard.html' %}
+
+{% block title %}About Us Management{% endblock %}
+
+{% block content %}
+<div class="ad-main-content">
+    <div class="ad-page-header">
+        <h1>ℹ️ About Us Management</h1>
+        <p>Manage your About Us section content</p>
+        <a href="{% url 'about_us_section_edit' %}" class="ad-btn ad-btn-primary">
+            <span>✏️</span> Edit Main Section
+        </a>
+    </div>
+
+    <!-- Main About Us Section Preview -->
+    <div class="ad-card">
+        <div class="ad-card-header">
+            <h2>👁️ About Us Preview</h2>
+        </div>
+        <div class="ad-card-body">
+            {% if about_us %}
+                <div class="about-preview">
+                    <div class="preview-header">
+                        <h3>{{ about_us.heading }}</h3>
+                        {% if about_us.logo %}
+                            <img src="{{ about_us.logo.url }}" alt="Logo" class="preview-logo">
+                        {% endif %}
+                        <p class="company-name">{{ about_us.company_name }}</p>
+                    </div>
+                    <div class="preview-description">
+                        {{ about_us.description|linebreaks }}
+                    </div>
+                    <div class="preview-contact">
+                        <p><i class="fa fa-map-marker"></i> {{ about_us.address }}</p>
+                        <p><i class="fa fa-envelope"></i> {{ about_us.email }}</p>
+                        <p><i class="fa fa-phone"></i> {{ about_us.phone }} {{ about_us.phone_hours }}</p>
+                    </div>
+                </div>
+            {% else %}
+                <p class="ad-empty-state">No About Us section configured. <a href="{% url 'about_us_section_edit' %}">Configure now</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Why Choose Us Section -->
+    <div class="ad-card">
+        <div class="ad-card-header">
+            <h2>💡 Why Choose Us Items</h2>
+            <a href="{% url 'why_choose_create' %}" class="ad-btn ad-btn-primary">
+                <span>➕</span> Add Item
+            </a>
+        </div>
+        <div class="ad-card-body">
+            {% if why_choose_items %}
+                <div class="ad-table-container">
+                    <table class="ad-table">
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Order</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in why_choose_items %}
+                                <tr {% if not item.is_active %}class="ad-inactive"{% endif %}>
+                                    <td><i class="{{ item.icon_class }}"></i></td>
+                                    <td><strong>{{ item.title }}</strong></td>
+                                    <td>{{ item.description|truncatechars:60 }}</td>
+                                    <td>
+                                        {% if item.is_active %}
+                                            <span class="ad-status ad-active">Active</span>
+                                        {% else %}
+                                            <span class="ad-status ad-inactive">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.order }}</td>
+                                    <td class="ad-actions">
+                                        <div class="action-buttons">
+                                            <a href="{% url 'why_choose_edit' item.pk %}" 
+                                               class="action-btn edit-btn" title="Edit Item">
+                                                <span class="btn-icon">✏️</span><span class="btn-text">Edit</span>
+                                            </a>
+                                            <a href="{% url 'why_choose_toggle_status' item.pk %}" 
+                                               class="action-btn {% if item.is_active %}hide-btn{% else %}show-btn{% endif %}" 
+                                               title="{% if item.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <span class="btn-icon">{% if item.is_active %}⏸️{% else %}▶️{% endif %}</span>
+                                                <span class="btn-text">{% if item.is_active %}Hide{% else %}Show{% endif %}</span>
+                                            </a>
+                                            <a href="{% url 'why_choose_delete' item.pk %}" 
+                                               onclick="return confirm('Are you sure?')" 
+                                               class="action-btn delete-btn" title="Delete Item">
+                                                <span class="btn-icon">🗑️</span><span class="btn-text">Delete</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="ad-empty-state">
+                    <h3>No "Why Choose Us" items yet</h3>
+                    <p>Add items to showcase why users should choose your platform.</p>
+                    <a href="{% url 'why_choose_create' %}" class="ad-btn ad-btn-primary">Add First Item</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Services Section -->
+    <div class="ad-card">
+        <div class="ad-card-header">
+            <h2>🎓 Our Services</h2>
+            <a href="{% url 'service_create' %}" class="ad-btn ad-btn-primary">
+                <span>➕</span> Add Service
+            </a>
+        </div>
+        <div class="ad-card-body">
+            {% if service_items %}
+                <div class="ad-table-container">
+                    <table class="ad-table">
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Service Name</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Order</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in service_items %}
+                                <tr {% if not item.is_active %}class="ad-inactive"{% endif %}>
+                                    <td><i class="{{ item.icon_class }}"></i></td>
+                                    <td><strong>{{ item.service_name }}</strong></td>
+                                    <td>{{ item.service_description|truncatechars:60 }}</td>
+                                    <td>
+                                        {% if item.is_active %}
+                                            <span class="ad-status ad-active">Active</span>
+                                        {% else %}
+                                            <span class="ad-status ad-inactive">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.order }}</td>
+                                    <td class="ad-actions">
+                                        <div class="action-buttons">
+                                            <a href="{% url 'service_edit' item.pk %}" 
+                                               class="action-btn edit-btn" title="Edit Service">
+                                                <span class="btn-icon">✏️</span><span class="btn-text">Edit</span>
+                                            </a>
+                                            <a href="{% url 'service_toggle_status' item.pk %}" 
+                                               class="action-btn {% if item.is_active %}hide-btn{% else %}show-btn{% endif %}" 
+                                               title="{% if item.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <span class="btn-icon">{% if item.is_active %}⏸️{% else %}▶️{% endif %}</span>
+                                                <span class="btn-text">{% if item.is_active %}Hide{% else %}Show{% endif %}</span>
+                                            </a>
+                                            <a href="{% url 'service_delete' item.pk %}" 
+                                               onclick="return confirm('Are you sure?')" 
+                                               class="action-btn delete-btn" title="Delete Service">
+                                                <span class="btn-icon">🗑️</span><span class="btn-text">Delete</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="ad-empty-state">
+                    <h3>No services added yet</h3>
+                    <p>Add services to showcase what your platform offers.</p>
+                    <a href="{% url 'service_create' %}" class="ad-btn ad-btn-primary">Add First Service</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Use the same CSS styles from your previous management pages -->
+<style>
+/* Copy the CSS styles from other_details_edit.html for consistent styling */
+.about-preview {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.preview-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.preview-header h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.preview-logo {
+    max-width: 150px;
+    height: auto;
+    margin: 10px 0;
+}
+
+.company-name {
+    font-weight: 600;
+    color: #007bff;
+    margin: 10px 0;
+}
+
+.preview-description {
+    line-height: 1.6;
+    color: #495057;
+    margin-bottom: 15px;
+}
+
+.preview-contact p {
+    margin: 5px 0;
+    color: #6c757d;
+}
+
+.preview-contact i {
+    width: 20px;
+    margin-right: 8px;
+    color: #007bff;
+}
+
+/* Copy all other CSS from previous management pages for consistent styling */
+</style>
+{% endblock %}

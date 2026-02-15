@@ -1,0 +1,213 @@
+{% extends 'admin_dashboard.html' %}
+{% load static %}
+
+{% block title %}SMTP Configuration{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <div class="nav-buttons">
+        <a href="{% url 'admindashboard' %}" class="btn">
+            <span>←</span> Back to Dashboard
+        </a>
+        <a href="{% url 'smtp_create' %}" class="btn btn-primary">
+            <span>+</span> Add SMTP Config
+        </a>
+    </div>
+
+    <h1 class="h1">SMTP Configuration</h1>
+    <p class="small">Manage email server settings for OTP and notifications</p>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Analytics Cards -->
+    <div class="analytics-grid">
+        <div class="analytics-card">
+            <div class="analytics-icon icon-total">📧</div>
+            <div class="analytics-value">{{ total_configs }}</div>
+            <div class="analytics-label">Total Configs</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-active">✅</div>
+            <div class="analytics-value">1</div>
+            <div class="analytics-label">Active Config</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-usage">🧪</div>
+            <div class="analytics-value">{{ tested_configs }}</div>
+            <div class="analytics-label">Tested Configs</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-icon icon-discount">📈</div>
+            <div class="analytics-value">{% if active_config %}{{ active_config.test_status|title }}{% else %}None{% endif %}</div>
+            <div class="analytics-label">Status</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="admin-card-hd">
+            <h3 class="panel-title">SMTP Configurations</h3>
+        </div>
+
+        {% if configurations %}
+            <div class="admin-card-bd">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email Host</th>
+                            <th>Port</th>
+                            <th>User</th>
+                            <th>Status</th>
+                            <th>Last Tested</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for config in configurations %}
+                            <tr {% if config.is_active %}style="background: #f0fdf4;"{% endif %}>
+                                <td>
+                                    <div class="coupon-code">
+                                        {{ config.name }}
+                                        {% if config.is_active %}
+                                            <span class="status-badge status-active">Active</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <code>{{ config.email_host }}{% if config.email_use_tls %}:TLS{% endif %}{% if config.email_use_ssl %}:SSL{% endif %}</code>
+                                </td>
+                                <td><strong>{{ config.email_port }}</strong></td>
+                                <td>{{ config.email_host_user }}</td>
+                                <td>
+                                    {% if config.test_status == 'success' %}
+                                        <span class="status-badge status-active">✅ Success</span>
+                                    {% elif config.test_status == 'failed' %}
+                                        <span class="status-badge status-expired">❌ Failed</span>
+                                    {% else %}
+                                        <span class="status-badge status-inactive">⏳ Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if config.last_tested %}
+                                        <div style="font-size: 13px;">{{ config.last_tested|date:"M d, Y" }}</div>
+                                        <div style="font-size: 11px; color: var(--admin-muted);">{{ config.last_tested|date:"g:i A" }}</div>
+                                    {% else %}
+                                        <span style="color: var(--admin-muted); font-style: italic;">Never tested</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="row-actions">
+                                        <button onclick="testSMTP({{ config.id }})" class="btn btn-primary" id="test-btn-{{ config.id }}">Test</button>
+                                        <a href="{% url 'smtp_edit' config.id %}" class="btn">Edit</a>
+                                        <a href="{% url 'smtp_delete' config.id %}" class="btn btn-danger">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No SMTP Configurations Found</h3>
+                <p>Set up your first SMTP configuration to start sending emails.</p>
+                <div style="margin-top: 20px;">
+                    <a href="{% url 'smtp_create' %}" class="btn btn-primary">Create SMTP Configuration</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+async function testSMTP(configId) {
+    const btn = document.getElementById(`test-btn-${configId}`);
+    const originalText = btn.textContent;
+    
+    // Show loading state
+    btn.innerHTML = '<span class="spinner"></span> Testing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch(`/smtp/test/${configId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            btn.innerHTML = '✅ Success';
+            btn.className = 'btn btn-success';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.className = 'btn btn-primary';
+            }, 3000);
+            
+            // Show success message
+            showMessage('SMTP test successful!', 'success');
+            
+            // Reload to update status
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            btn.innerHTML = '❌ Failed';
+            btn.className = 'btn btn-danger';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.className = 'btn btn-primary';
+            }, 3000);
+            
+            showMessage(`SMTP test failed: ${data.message}`, 'error');
+        }
+    } catch (error) {
+        btn.innerHTML = '❌ Error';
+        btn.className = 'btn btn-danger';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.className = 'btn btn-primary';
+        }, 3000);
+        
+        showMessage('Network error occurred', 'error');
+    }
+    
+    btn.disabled = false;
+}
+
+function showMessage(message, type) {
+    const messagesDiv = document.querySelector('.messages') || createMessagesDiv();
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${type}`;
+    messageElement.textContent = message;
+    messagesDiv.appendChild(messageElement);
+    
+    setTimeout(() => messageElement.remove(), 5000);
+}
+
+function createMessagesDiv() {
+    const div = document.createElement('div');
+    div.className = 'messages';
+    document.querySelector('.wrapper').insertBefore(div, document.querySelector('.analytics-grid'));
+    return div;
+}
+
+// Add CSRF token to page
+if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfInput);
+}
+</script>
+{% endblock %}

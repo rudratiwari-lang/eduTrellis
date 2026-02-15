@@ -1,0 +1,86 @@
+{% extends "admin_dashboard.html" %}
+{% block content %}
+
+<div class="wrapper">
+    <!-- Navigation Buttons -->
+    <div class="nav-buttons">
+        <a href="{% url 'coupon_list' %}" class="btn">
+            <span>←</span>
+            <span>Back to Coupons</span>
+        </a>
+    </div>
+
+    <div class="h1">Coupon Analytics</div>
+    <div class="small">Monitor coupon performance and usage statistics.</div>
+
+    <!-- Analytics Cards Grid - 4 Horizontal Boxes -->
+    <div class="analytics-grid">
+        <div class="analytics-card">
+            <div class="analytics-icon icon-total">🔑</div>
+            <div class="analytics-value">{{ total_coupons }}</div>
+            <div class="analytics-label">Total Coupons</div>
+        </div>
+
+        <div class="analytics-card">
+            <div class="analytics-icon icon-active">✅</div>
+            <div class="analytics-value">{{ active_coupons }}</div>
+            <div class="analytics-label">Active Coupons</div>
+        </div>
+
+        <div class="analytics-card">
+            <div class="analytics-icon icon-usage">📊</div>
+            <div class="analytics-value">{{ usage_stats.total_usage|default:0 }}</div>
+            <div class="analytics-label">Total Usage</div>
+        </div>
+
+        <div class="analytics-card">
+            <div class="analytics-icon icon-discount">💰</div>
+            <div class="analytics-value">₹{{ usage_stats.total_discount|default:0 }}</div>
+            <div class="analytics-label">Total Discounts</div>
+        </div>
+    </div>
+
+    <!-- Top Performing Coupons -->
+    <div class="panel">
+        <h3 class="panel-title">Top Performing Coupons</h3>
+        {% if top_coupons %}
+        <div class="table-container">
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Coupon Code</th>
+                        <th>Usage Count</th>
+                        <th>Total Discount</th>
+                        <th>Status</th>
+                        <th>Valid Until</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for coupon in top_coupons %}
+                    <tr>
+                        <td>
+                            <span class="coupon-code">{{ coupon.code }}</span>
+                        </td>
+                        <td>{{ coupon.usage_count }}</td>
+                        <td>₹{{ coupon.total_discount|default:0 }}</td>
+                        <td>
+                            <span class="status-badge status-{{ coupon.status }}">
+                                {{ coupon.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ coupon.valid_to|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Data Available</h3>
+            <p>Create some coupons to see analytics here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

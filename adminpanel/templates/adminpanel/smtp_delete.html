@@ -1,0 +1,33 @@
+{% extends 'admin_dashboard.html' %}
+{% load static %}
+
+{% block title %}Delete SMTP Configuration{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <div class="nav-buttons">
+        <a href="{% url 'smtp_configuration' %}" class="btn">
+            <span>←</span> Back to SMTP Configurations
+        </a>
+    </div>
+
+    <h1 class="h1">Delete SMTP Configuration</h1>
+    <p class="small">Are you sure you want to delete the SMTP configuration <strong>"{{ config.name }}"</strong>?</p>
+
+    <form method="post" onsubmit="disableDelete(this)">
+        {% csrf_token %}
+        <div class="actions" style="gap: 10px;">
+            <button type="submit" class="btn btn-danger">Confirm Delete</button>
+            <a href="{% url 'smtp_configuration' %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function disableDelete(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+}
+</script>
+{% endblock %}

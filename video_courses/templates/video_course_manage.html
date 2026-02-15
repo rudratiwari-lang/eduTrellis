@@ -1,0 +1,434 @@
+{% extends "admin_dashboard.html" %}
+{% block content %}
+<main>
+    <div class="wrapper">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1>Manage Video Courses</h1>
+                <p class="page-subtitle">View, edit, and manage all your video courses from this dashboard.</p>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="analytics-icon icon-total">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="analytics-value">{{ total_courses }}</div>
+                <div class="analytics-label">Total Courses</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-icon icon-active">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+                <div class="analytics-value">{{ active_courses }}</div>
+                <div class="analytics-label">Active Courses</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-icon icon-usage">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="analytics-value">{{ avg_rating }}</div>
+                <div class="analytics-label">Avg Rating</div>
+            </div>
+            <div class="analytics-card">
+                <div class="analytics-icon icon-discount">
+                    <i class="fas fa-video"></i>
+                </div>
+                <div class="analytics-value">{{ total_videos }}</div>
+                <div class="analytics-label">Total Videos</div>
+            </div>
+        </div>
+
+        <!-- Header section with title, search and action button -->
+        <div class="page-header">
+            <div class="header-content">
+                <h1>All Courses</h1>
+            </div>
+            <div class="header-actions">
+                <div class="admin-filters">
+                    <input 
+                        type="text" 
+                        class="admin-filter-input" 
+                        placeholder="Search courses by name…"
+                        id="courseSearch"
+                    >
+                    <a href="{% url 'video_course_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i>
+                        New Course
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table panel -->
+        <div class="panel">
+            <div class="table-wrapper">
+                <table class="admin-table" id="coursesTable">
+                    <thead>
+                        <tr>
+                            <th>Thumbnail</th>
+                            <th>Course</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Rating</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coursesTableBody">
+                        {% if courses %}
+                            {% for c in courses %}
+                                <tr class="user-row" data-course-name="{{ c.name|lower }}">
+                                    <td>
+                                        {% if c.thumbnail %}
+                                            <img src="{{ c.thumbnail.url }}" alt="{{ c.name }}" 
+                                                 style="width: 48px; height: 32px; object-fit: cover; border-radius: 4px; display: block;">
+                                        {% else %}
+                                            <div style="width: 48px; height: 32px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 10px;">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-name">{{ c.name }}</div>
+                                            <div class="date-secondary">
+                                                <i class="fas fa-video" style="margin-right: 4px;"></i>{{ c.videos.count }} videos
+                                                <span style="margin-left: 8px;">
+                                                    <i class="fas fa-clock" style="margin-right: 4px;"></i>{{ c.total_hours }}h
+                                                </span>
+                                                {% if c.is_free %}
+                                                    <span style="margin-left: 8px; color: #16a34a; font-weight: 500;">
+                                                        <i class="fas fa-gift" style="margin-right: 4px;"></i>Free
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if c.category %}
+                                            <span class="type-badge type-regular">{{ c.category.name }}</span>
+                                        {% else %}
+                                            <span class="type-badge type-regular">No Category</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="date-cell">
+                                            {% if c.is_free %}
+                                                <div class="date-primary" style="color: #16a34a; font-weight: 600;">FREE</div>
+                                            {% else %}
+                                                <div class="date-primary">₹{{ c.selling_price|floatformat:0 }}</div>
+                                                {% if c.original_price != c.selling_price %}
+                                                    <div class="date-secondary" style="text-decoration: line-through;">
+                                                        ₹{{ c.original_price|floatformat:0 }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date-cell">
+                                            <div class="date-primary" style="display: flex; align-items: center; gap: 4px;">
+                                                <i class="fas fa-star" style="color: #fbbf24; font-size: 12px;"></i>
+                                                {{ c.rating|floatformat:1 }}
+                                            </div>
+                                            <div class="date-secondary">({{ c.rating_count }} reviews)</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date-cell">
+                                            <div class="date-primary">{{ c.updated_at|date:"M d, Y" }}</div>
+                                            <div class="date-secondary">{{ c.updated_at|timesince }} ago</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="{% url 'video_course_edit_by_pk' pk=c.pk %}" class="action-btn" title="Edit Course">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="action-btn text-danger" title="Delete Course"
+                                                   onclick="deleteCourse({{ c.pk }}, '{{ c.name|escapejs }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-graduation-cap" style="font-size: 48px; color: #ccc;"></i>
+                                    </div>
+                                    <div class="empty-title">No courses yet</div>
+                                    <div class="empty-text">Create your first course to get started</div>
+                                    <div style="margin-top: 16px;">
+                                        <a href="{% url 'video_course_create' %}" class="btn btn-success">
+                                            <i class="fas fa-plus"></i>
+                                            Create First Course
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+// Enhanced notification system
+function showNotification(message, type = 'success', duration = 4000) {
+    const existingNotifications = document.querySelectorAll('.custom-notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `custom-notification custom-notification-${type}`;
+    
+    let bgColor, textColor, icon;
+    switch(type) {
+        case 'success':
+            bgColor = '#f0fdf4';
+            textColor = '#16a34a';
+            icon = '<i class="fas fa-check-circle"></i>';
+            break;
+        case 'error':
+            bgColor = '#fef2f2';
+            textColor = '#dc2626';
+            icon = '<i class="fas fa-exclamation-circle"></i>';
+            break;
+        case 'info':
+            bgColor = '#eff6ff';
+            textColor = '#2563eb';
+            icon = '<i class="fas fa-info-circle"></i>';
+            break;
+        default:
+            bgColor = '#f9fafb';
+            textColor = '#374151';
+            icon = '<i class="fas fa-bell"></i>';
+    }
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: ${textColor};">${icon}</span>
+            <span style="flex: 1;">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: ${textColor}; opacity: 0.6;">×</button>
+        </div>
+    `;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        max-width: 400px;
+        min-width: 300px;
+        background: ${bgColor};
+        color: ${textColor};
+        border: 1px solid ${type === 'success' ? '#bbf7d0' : type === 'error' ? '#fecaca' : '#bfdbfe'};
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, duration);
+}
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.95); }
+    }
+    
+    .custom-notification:hover {
+        transform: translateX(-5px);
+        transition: transform 0.2s ease;
+    }
+`;
+document.head.appendChild(style);
+
+// Get CSRF token function
+function getCSRFToken() {
+    let token = null;
+    
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        token = csrfInput.value;
+    }
+    
+    if (!token) {
+        const csrfMeta = document.querySelector('meta[name=csrf-token]');
+        if (csrfMeta) {
+            token = csrfMeta.getAttribute('content');
+        }
+    }
+    
+    if (!token) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                token = value;
+                break;
+            }
+        }
+    }
+    
+    return token;
+}
+
+// Fixed delete course function
+function deleteCourse(courseId, courseName) {
+    if (confirm(`Are you sure you want to delete "${courseName}"?\n\nThis action cannot be undone and will permanently remove:\n• All course videos\n• Course materials\n• Student progress data`)) {
+        
+        showNotification('Deleting course...', 'info', 10000);
+        
+        const deleteBtn = event.target.closest('button');
+        if (!deleteBtn) {
+            showNotification('Error: Could not find delete button', 'error');
+            return;
+        }
+        
+        const originalContent = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        deleteBtn.disabled = true;
+        
+        const csrfToken = getCSRFToken();
+        if (!csrfToken) {
+            showNotification('Error: CSRF token not found. Please refresh the page.', 'error');
+            deleteBtn.innerHTML = originalContent;
+            deleteBtn.disabled = false;
+            return;
+        }
+        
+        fetch(`/video-courses/${courseId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const loadingNotification = document.querySelector('.custom-notification-info');
+            if (loadingNotification) loadingNotification.remove();
+            
+            if (data.success) {
+                showNotification(data.message, 'success', 5000);
+                
+                const row = deleteBtn.closest('tr');
+                if (row) {
+                    row.style.animation = 'fadeOut 0.5s ease-out';
+                    setTimeout(() => {
+                        row.remove();
+                        
+                        const tableBody = document.getElementById('coursesTableBody');
+                        if (tableBody && tableBody.querySelectorAll('tr.user-row').length === 0) {
+                            tableBody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        <div class="empty-icon">
+                                            <i class="fas fa-graduation-cap" style="font-size: 48px; color: #ccc;"></i>
+                                        </div>
+                                        <div class="empty-title">No courses yet</div>
+                                        <div class="empty-text">Create your first course to get started</div>
+                                        <div style="margin-top: 16px;">
+                                            <a href="{% url 'video_course_create' %}" class="btn btn-success">
+                                                <i class="fas fa-plus"></i>
+                                                Create First Course
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }, 500);
+                } else {
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } else {
+                showNotification(`Error: ${data.error || 'Unknown error occurred'}`, 'error');
+                deleteBtn.innerHTML = originalContent;
+                deleteBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            
+            const loadingNotification = document.querySelector('.custom-notification-info');
+            if (loadingNotification) loadingNotification.remove();
+            
+            showNotification(`Network error: ${error.message}. Please check your connection and try again.`, 'error');
+            
+            deleteBtn.innerHTML = originalContent;
+            deleteBtn.disabled = false;
+        });
+    }
+}
+
+// Course search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('courseSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#coursesTableBody tr.user-row');
+            
+            rows.forEach(row => {
+                const courseName = row.getAttribute('data-course-name');
+                if (courseName && courseName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    const messageElements = document.querySelectorAll('.messages .message');
+    messageElements.forEach(messageEl => {
+        const messageType = messageEl.classList.contains('error') ? 'error' : 'success';
+        const messageText = messageEl.textContent.trim();
+        if (messageText) {
+            showNotification(messageText, messageType);
+            messageEl.style.display = 'none';
+        }
+    });
+});
+</script>
+
+{% endblock %}
