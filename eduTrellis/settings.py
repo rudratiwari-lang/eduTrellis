@@ -15,7 +15,7 @@ SECRET_KEY = "django-insecure-h^l!e0kvn8ore3fikloht@x^6nlif_jbgg$=x=!0b(v-lu#ev_
 
 DEBUG = False
 
-ALLOWED_HOSTS = ["ganeshsirclasses.online","www.ganeshsirclasses.online",]
+ALLOWED_HOSTS = ['*']
 
 # --------------------
 # APPLICATIONS
@@ -81,15 +81,15 @@ WSGI_APPLICATION = "eduTrellis.wsgi.application"
 
 # --------------------
 # DATABASE
-# --------------------
-import dj_database_url
-import os
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('postgresql://postgres:kEXGQNxJDRWERznrdJugjYQHHRdvHxoP@ballast.proxy.rlwy.net:29071/railway')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
+
+
 # --------------------
 # PASSWORD VALIDATION
 # --------------------
