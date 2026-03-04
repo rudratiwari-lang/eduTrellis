@@ -3,8 +3,13 @@ certifi==2025.11.12
 charset-normalizer==3.4.4
 dj-database-url==3.1.0
 Django==6.0
+dropbox==11.36.2
 gunicorn==25.0.3
 idna==3.11
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+moviepy==1.0.3
+numpy==1.26.4
 packaging==26.0
 pillow==12.0.0
 psycopg2-binary==2.9.11
