@@ -1,7 +1,6 @@
 {% extends "admin_dashboard.html" %}
-{% include message.html %}
+{% include "message.html" %}
 {% block content %}
-
 
 <main>
   <div class="page-header">
@@ -11,7 +10,6 @@
     </div>
   </div>
 
-
   {% if messages %}
     <div class="messages">
       {% for message in messages %}
@@ -20,12 +18,9 @@
     </div>
   {% endif %}
 
-
   <div class="wrapper">
-    <!-- Create/Edit Form -->
     <form method="post" enctype="multipart/form-data" id="courseForm">
       {% csrf_token %}
-
 
       <!-- 1) Course Identity -->
       <div class="panel">
@@ -33,17 +28,24 @@
         <div class="grid">
           <div class="col-6">
             <label>Course Name</label>
-            {{ form.name }} 
-            {% if form.name.errors %}<ul class="errorlist">{% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.name }}
+            {% if form.name.errors %}
+              <ul class="errorlist">
+                {% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-6">
             <label>Category</label>
-            {{ form.category }} 
-            {% if form.category.errors %}<ul class="errorlist">{% for error in form.category.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.category }}
+            {% if form.category.errors %}
+              <ul class="errorlist">
+                {% for error in form.category.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
         </div>
       </div>
-
 
       <!-- 2) Videos -->
       <div class="panel">
@@ -51,36 +53,70 @@
         <p class="small">Upload your lessons. Duration is auto-detected after upload. Mark "Preview" if applicable.</p>
         {{ video_fs.management_form }}
         {% for v in video_fs %}
-          <div class="coupon-card">
+          <div class="coupon-card" data-video-form data-video-index="{{ forloop.counter0 }}">
             {{ v.id }}
             <div class="grid">
               <div class="col-6">
                 <label>Title</label>
-                {{ v.title }} 
-                {% if v.title.errors %}<ul class="errorlist">{% for error in v.title.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {{ v.title }}
+                {% if v.title.errors %}
+                  <ul class="errorlist">
+                    {% for error in v.title.errors %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
               </div>
               <div class="col-3">
                 <div class="form-group">
-                  <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+                  <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                     {{ v.is_preview }} <span>Preview?</span>
                   </label>
                 </div>
               </div>
               <div class="col-3"></div>
+
               <div class="col-6">
                 <label>Video File</label>
-                {{ v.file }} 
-                {% if v.file.errors %}<ul class="errorlist">{% for error in v.file.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {{ v.file }}
+                {% if v.file.errors %}
+                  <ul class="errorlist">
+                    {% for error in v.file.errors %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+                <div class="video-duration-display" style="margin-top:4px;font-size:12px;color:#64748b;">
+                  {% if v.instance.pk and v.instance.file %}
+                    <strong>Current file:</strong> <a href="{{ v.instance.file.url }}" target="_blank" style="color:#6366f1;">{{ v.instance.file.name }}</a>
+                    {% if v.instance.duration %}
+                      <br><strong>Duration:</strong> <span class="duration-value" data-seconds="{{ v.instance.duration }}">{{ v.instance.duration_display|default:"Calculating..." }}</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="duration-placeholder">Select a video file to see duration</span>
+                  {% endif %}
+                </div>
               </div>
+
               <div class="col-6">
                 <label>Thumb Image</label>
-                {{ v.thumb_image }} 
-                {% if v.thumb_image.errors %}<ul class="errorlist">{% for error in v.thumb_image.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {{ v.thumb_image }}
+                {% if v.thumb_image.errors %}
+                  <ul class="errorlist">
+                    {% for error in v.thumb_image.errors %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+                {% if v.instance.pk and v.instance.thumb_image %}
+                  <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+                    <img src="{{ v.instance.thumb_image.url }}" alt="Thumb" style="max-width:120px;border-radius:6px;display:block;margin-top:4px;">
+                  </div>
+                {% else %}
+                  <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+                    If no thumbnail is uploaded, a default thumbnail will be generated from the video.
+                  </div>
+                {% endif %}
               </div>
+
               {% if v.instance.pk %}
                 <div class="col-12">
                   <div class="form-group">
-                    <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                       {{ v.DELETE }} <span>Delete</span>
                     </label>
                   </div>
@@ -89,16 +125,16 @@
             </div>
           </div>
         {% endfor %}
+
         <div class="actions">
           <button type="button" class="btn" onclick="addFormset('vid')">
             <i class="fas fa-plus"></i> Add Video
           </button>
         </div>
-        <div class="message" style="margin-top: 12px;">
+        <div class="message" style="margin-top:12px;">
           <strong>💡 Tip:</strong> If you have many videos, scroll down to see all video upload forms. You can add multiple videos by clicking the "+ Add Video" button above.
         </div>
       </div>
-
 
       <!-- 3) Core Details -->
       <div class="panel">
@@ -106,76 +142,117 @@
         <div class="grid">
           <div class="col-12">
             <label>Description</label>
-            {{ form.description }} 
-            {% if form.description.errors %}<ul class="errorlist">{% for error in form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.description }}
+            {% if form.description.errors %}
+              <ul class="errorlist">
+                {% for error in form.description.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-4">
             <label>Original Price</label>
-            {{ form.original_price }} 
-            {% if form.original_price.errors %}<ul class="errorlist">{% for error in form.original_price.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.original_price }}
+            {% if form.original_price.errors %}
+              <ul class="errorlist">
+                {% for error in form.original_price.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-4">
             <label>Selling Price</label>
-            {{ form.selling_price }} 
-            {% if form.selling_price.errors %}<ul class="errorlist">{% for error in form.selling_price.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.selling_price }}
+            {% if form.selling_price.errors %}
+              <ul class="errorlist">
+                {% for error in form.selling_price.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-4">
             <label>Currency</label>
-            {{ form.currency }} 
-            {% if form.currency.errors %}<ul class="errorlist">{% for error in form.currency.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.currency }}
+            {% if form.currency.errors %}
+              <ul class="errorlist">
+                {% for error in form.currency.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-6">
             <label>Thumbnail</label>
-            {{ form.thumbnail }} 
-            {% if form.thumbnail.errors %}<ul class="errorlist">{% for error in form.thumbnail.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-            <div class="help-text">Recommended 16:9 image.</div>
+            {{ form.thumbnail }}
+            {% if form.thumbnail.errors %}
+              <ul class="errorlist">
+                {% for error in form.thumbnail.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+            {% if course and course.thumbnail %}
+              <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+                <img src="{{ course.thumbnail.url }}" alt="Course thumbnail" style="max-width:140px;border-radius:6px;display:block;margin-top:4px;">
+              </div>
+            {% else %}
+              <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+                Recommended 16:9 image. If not uploaded, first video thumbnail will be used.
+              </div>
+            {% endif %}
           </div>
           <div class="col-6"></div>
         </div>
-        <hr style="height: 1px; background: var(--ad-border); margin: 12px 0; border: none;">
+        <hr style="height:1px;background:var(--ad-border);margin:12px 0;border:none;">
         <div class="grid">
           <div class="col-3">
             <div class="form-group">
-              <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+              <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                 {{ form.is_free }} <span>Free Course</span>
               </label>
-              <div class="help-text" style="font-size: 12px; margin-top: 4px;">
-                {% if form.is_free.help_text %}
-                  {{ form.is_free.help_text|safe }}
-                {% endif %}
+              <div class="help-text" style="font-size:12px;margin-top:4px;">
+                {% if form.is_free.help_text %}{{ form.is_free.help_text|safe }}{% endif %}
               </div>
             </div>
           </div>
           <div class="col-3">
             <div class="form-group">
-              <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+              <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                 {{ form.is_premium }} <span>Premium</span>
               </label>
             </div>
           </div>
           <div class="col-3">
             <div class="form-group">
-              <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+              <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                 {{ form.is_bestseller }} <span>Bestseller</span>
               </label>
             </div>
           </div>
           <div class="col-3"></div>
           <div class="col-2">
-            <label>Rating</label>{{ form.rating }} 
-            {% if form.rating.errors %}<ul class="errorlist">{% for error in form.rating.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            <label>Rating</label>{{ form.rating }}
+            {% if form.rating.errors %}
+              <ul class="errorlist">
+                {% for error in form.rating.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-2">
-            <label>Rating Count</label>{{ form.rating_count }} 
-            {% if form.rating_count.errors %}<ul class="errorlist">{% for error in form.rating_count.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            <label>Rating Count</label>{{ form.rating_count }}
+            {% if form.rating_count.errors %}
+              <ul class="errorlist">
+                {% for error in form.rating_count.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-2">
-            <label>Total Hours</label>{{ form.total_hours }} 
-            {% if form.total_hours.errors %}<ul class="errorlist">{% for error in form.total_hours.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            <label>Total Hours <span id="totalHoursCalc" style="font-size:11px;color:#16a34a;font-weight:600;"></span></label>
+            {{ form.total_hours }}
+            {% if form.total_hours.errors %}
+              <ul class="errorlist">
+                {% for error in form.total_hours.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+            <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+              Auto-calculated from video durations
+            </div>
           </div>
         </div>
       </div>
-
 
       <!-- 4) What you'll learn -->
       <div class="panel">
@@ -187,13 +264,17 @@
             <div class="grid">
               <div class="col-12">
                 <label>Point</label>
-                {{ f.text }} 
-                {% if f.text.errors %}<ul class="errorlist">{% for error in f.text.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {{ f.text }}
+                {% if f.text.errors %}
+                  <ul class="errorlist">
+                    {% for error in f.text.errors %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
               </div>
               {% if f.instance.pk %}
                 <div class="col-12">
                   <div class="form-group">
-                    <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                       {{ f.DELETE }} <span>Delete</span>
                     </label>
                   </div>
@@ -209,7 +290,6 @@
         </div>
       </div>
 
-
       <!-- 5) Includes -->
       <div class="panel">
         <div class="panel-title">Includes</div>
@@ -220,13 +300,17 @@
             <div class="grid">
               <div class="col-12">
                 <label>Label</label>
-                {{ f.label }} 
-                {% if f.label.errors %}<ul class="errorlist">{% for error in f.label.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                {{ f.label }}
+                {% if f.label.errors %}
+                  <ul class="errorlist">
+                    {% for error in f.label.errors %}<li>{{ error }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
               </div>
               {% if f.instance.pk %}
                 <div class="col-12">
                   <div class="form-group">
-                    <label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                       {{ f.DELETE }} <span>Delete</span>
                     </label>
                   </div>
@@ -242,36 +326,51 @@
         </div>
       </div>
 
-
       <!-- 6) Instructor -->
       <div class="panel">
         <div class="panel-title">Instructor</div>
         <div class="grid">
           <div class="col-6">
             <label>Name</label>
-            {{ form.instructor_name }} 
-            {% if form.instructor_name.errors %}<ul class="errorlist">{% for error in form.instructor_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.instructor_name }}
+            {% if form.instructor_name.errors %}
+              <ul class="errorlist">
+                {% for error in form.instructor_name.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-6">
             <label>Headline</label>
-            {{ form.instructor_headline }} 
-            {% if form.instructor_headline.errors %}<ul class="errorlist">{% for error in form.instructor_headline.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.instructor_headline }}
+            {% if form.instructor_headline.errors %}
+              <ul class="errorlist">
+                {% for error in form.instructor_headline.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
           </div>
           <div class="col-6">
             <label>Avatar</label>
-            {{ form.instructor_avatar }} 
-            {% if form.instructor_avatar.errors %}<ul class="errorlist">{% for error in form.instructor_avatar.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.instructor_avatar }}
+            {% if form.instructor_avatar.errors %}
+              <ul class="errorlist">
+                {% for error in form.instructor_avatar.errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            {% endif %}
+            {% if course and course.instructor_avatar %}
+              <div class="help-text" style="margin-top:4px;font-size:12px;color:#64748b;">
+                <img src="{{ course.instructor_avatar.url }}" alt="Instructor avatar" style="max-width:120px;border-radius:50%;display:block;margin-top:4px;">
+              </div>
+            {% endif %}
           </div>
           <div class="col-6"></div>
         </div>
       </div>
 
-
       <div class="panel">
         <div class="actions">
           <button type="submit" class="btn btn-primary" id="saveCourseBtn">
             <span class="btn-icon">
-              {% if mode == 'edit' %}<i class="fas fa-save"></i>{% else %}<i class="fas fa-save"></i>{% endif %}
+              <i class="fas fa-save"></i>
             </span>
             <span class="btn-text">
               {% if mode == 'edit' %}Update Course{% else %}Save Course{% endif %}
@@ -283,16 +382,15 @@
   </div>
 </main>
 
-
 <script>
 // Enhanced notification system
 function showNotification(message, type = 'success', duration = 4000) {
   const existingNotifications = document.querySelectorAll('.custom-notification');
   existingNotifications.forEach(notification => notification.remove());
-  
+
   const notification = document.createElement('div');
   notification.className = `custom-notification custom-notification-${type}`;
-  
+
   let bgColor, textColor, icon;
   switch(type) {
     case 'success':
@@ -315,7 +413,7 @@ function showNotification(message, type = 'success', duration = 4000) {
       textColor = '#374151';
       icon = '<i class="fas fa-bell"></i>';
   }
-  
+
   notification.innerHTML = `
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="color: ${textColor};">${icon}</span>
@@ -323,7 +421,7 @@ function showNotification(message, type = 'success', duration = 4000) {
       <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: ${textColor}; opacity: 0.6;">×</button>
     </div>
   `;
-  
+
   notification.style.cssText = `
     position: fixed;
     top: 20px;
@@ -341,9 +439,9 @@ function showNotification(message, type = 'success', duration = 4000) {
     font-weight: 500;
     animation: slideInRight 0.3s ease-out;
   `;
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     if (notification.parentNode) {
       notification.style.animation = 'slideOutRight 0.3s ease-out';
@@ -352,7 +450,6 @@ function showNotification(message, type = 'success', duration = 4000) {
   }, duration);
 }
 
-
 // Add CSS animations
 const style = document.createElement('style');
 style.textContent = `
@@ -360,26 +457,167 @@ style.textContent = `
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
-  
+
   @keyframes slideOutRight {
     from { transform: translateX(0); opacity: 1; }
     to { transform: translateX(100%); opacity: 0; }
   }
-  
-  @keyframes fadeOut {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0; transform: scale(0.95); }
-  }
-  
+
   .custom-notification:hover {
     transform: translateX(-5px);
     transition: transform 0.2s ease;
   }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 `;
 document.head.appendChild(style);
 
+// Store video durations (in seconds)
+const videoDurations = {};
 
-// Duplicate the last form row for a given inline formset prefix
+// Format seconds to readable duration
+function formatDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  let result = '';
+  if (hours > 0) result += `${hours}h `;
+  if (minutes > 0) result += `${minutes}m `;
+  if (secs > 0 || result === '') result += `${secs}s`;
+  
+  return result.trim();
+}
+
+// Calculate and update total hours
+function updateTotalHours() {
+  let totalSeconds = 0;
+  
+  // Sum all video durations
+  Object.values(videoDurations).forEach(seconds => {
+    if (seconds > 0) totalSeconds += seconds;
+  });
+  
+  // Also include existing saved videos
+  document.querySelectorAll('.duration-value[data-seconds]').forEach(el => {
+    const videoForm = el.closest('[data-video-form]');
+    const index = videoForm ? videoForm.dataset.videoIndex : null;
+    
+    // Only add if not already in videoDurations (not newly selected)
+    if (index && !videoDurations[index]) {
+      const seconds = parseFloat(el.dataset.seconds);
+      if (!isNaN(seconds)) totalSeconds += seconds;
+    }
+  });
+  
+  // Convert to hours
+  const totalHours = (totalSeconds / 3600).toFixed(2);
+  
+  // Update the input field
+  const totalHoursInput = document.querySelector('input[name$="total_hours"]');
+  if (totalHoursInput) {
+    totalHoursInput.value = totalHours;
+    totalHoursInput.style.background = '#f0fdf4';
+    totalHoursInput.style.transition = 'background 0.3s ease';
+    setTimeout(() => {
+      totalHoursInput.style.background = '';
+    }, 1000);
+  }
+  
+  // Update the label indicator
+  const calcLabel = document.getElementById('totalHoursCalc');
+  if (calcLabel && totalSeconds > 0) {
+    calcLabel.textContent = `(${formatDuration(totalSeconds)})`;
+  }
+}
+
+// Handle video file selection and read metadata
+function handleVideoFileChange(event) {
+  const fileInput = event.target;
+  const file = fileInput.files[0];
+  const videoForm = fileInput.closest('[data-video-form]');
+  const durationDisplay = videoForm.querySelector('.video-duration-display');
+  const videoIndex = videoForm.dataset.videoIndex;
+  
+  if (!file) {
+    // File removed
+    delete videoDurations[videoIndex];
+    durationDisplay.innerHTML = '<span class="duration-placeholder">Select a video file to see duration</span>';
+    updateTotalHours();
+    return;
+  }
+  
+  // Check if it's a video file
+  if (!file.type.startsWith('video/')) {
+    durationDisplay.innerHTML = '<span style="color:#dc2626;">⚠️ Please select a valid video file</span>';
+    delete videoDurations[videoIndex];
+    updateTotalHours();
+    return;
+  }
+  
+  // Show loading
+  durationDisplay.innerHTML = '<span style="color:#2563eb;"><i class="fas fa-spinner fa-spin"></i> Detecting duration...</span>';
+  
+  // Create video element to read metadata
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  
+  video.onloadedmetadata = function() {
+    window.URL.revokeObjectURL(video.src);
+    const duration = Math.floor(video.duration);
+    
+    // Store duration
+    videoDurations[videoIndex] = duration;
+    
+    // Display duration
+    const formattedDuration = formatDuration(duration);
+    const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+    
+    durationDisplay.innerHTML = `
+      <strong style="color:#16a34a;">✓ Selected:</strong> ${file.name}<br>
+      <strong>Duration:</strong> ${formattedDuration} | <strong>Size:</strong> ${fileSize} MB
+    `;
+    
+    // Update total hours
+    updateTotalHours();
+    
+    // Show success notification
+    showNotification(`Video duration detected: ${formattedDuration}`, 'success', 2000);
+  };
+  
+  video.onerror = function() {
+    window.URL.revokeObjectURL(video.src);
+    durationDisplay.innerHTML = '<span style="color:#dc2626;">⚠️ Could not read video duration</span>';
+    delete videoDurations[videoIndex];
+    updateTotalHours();
+  };
+  
+  video.src = URL.createObjectURL(file);
+}
+
+// Attach event listeners to all video file inputs
+function attachVideoFileListeners() {
+  document.querySelectorAll('input[type="file"][name*="-file"]').forEach(input => {
+    // Remove old listeners to prevent duplicates
+    input.removeEventListener('change', handleVideoFileChange);
+    // Add new listener
+    input.addEventListener('change', handleVideoFileChange);
+  });
+}
+
+// addFormset: only modify new row, do not touch existing values
 function addFormset(prefix){
   const total = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
   if(!total) return;
@@ -396,41 +634,76 @@ function addFormset(prefix){
   if(!last) return;
 
   const clone = last.cloneNode(true);
+  
+  // Update index
+  clone.dataset.videoIndex = count;
 
   clone.querySelectorAll("[name]").forEach(el => {
     el.name = el.name.replace(new RegExp(`${prefix}-\\d+-`), `${prefix}-${count}-`);
     if(el.id) el.id = el.id.replace(new RegExp(`${prefix}-\\d+-`), `${prefix}-${count}-`);
-    if(el.type === "checkbox"){ el.checked = false; }
-    else if(el.type === "file"){ el.value = ""; }
-    else if(el.tagName.toLowerCase() === "select"){ el.selectedIndex = 0; }
-    else { el.value = ""; }
+
+    if (el.type === "checkbox") {
+      el.checked = false;
+    } else if (el.type === "file") {
+      el.value = "";
+    } else if (el.tagName.toLowerCase() === "select") {
+      el.selectedIndex = 0;
+    } else {
+      el.value = "";
+    }
   });
+
+  // Reset duration display
+  const durationDisplay = clone.querySelector('.video-duration-display');
+  if (durationDisplay) {
+    durationDisplay.innerHTML = '<span class="duration-placeholder">Select a video file to see duration</span>';
+  }
+
+  // Remove current file/image display from cloned row
+  clone.querySelectorAll('.help-text img, .help-text a').forEach(el => {
+    if (el.tagName === 'IMG' || el.parentElement.tagName === 'A') {
+      el.remove();
+    }
+  });
+
+  // Reset help text for thumbnail
+  const thumbHelp = clone.querySelector('.col-6:has([type="file"][name*="thumb"]) .help-text');
+  if (thumbHelp) {
+    thumbHelp.innerHTML = 'If no thumbnail is uploaded, a default thumbnail will be generated from the video.';
+  }
+
+  const deleteInput = clone.querySelector('input[type="checkbox"][name$="-DELETE"]');
+  if (deleteInput) {
+    const formGroup = deleteInput.closest('.form-group');
+    if (formGroup) formGroup.remove();
+  }
 
   clone.querySelectorAll(".errorlist").forEach(e => e.remove());
 
   last.after(clone);
   total.value = count + 1;
   
+  // Attach listeners to the new video file input
+  attachVideoFileListeners();
+  
   clone.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-
-// Add loader to Save Course button
-document.getElementById('courseForm').addEventListener('submit', function(e) {
+// submit button loader
+document.getElementById('courseForm').addEventListener('submit', function() {
   const btn = document.getElementById('saveCourseBtn');
   const icon = btn.querySelector('.btn-icon');
   const text = btn.querySelector('.btn-text');
-  
+
   btn.classList.add('btn-loading');
   icon.innerHTML = '<div class="spinner"></div>';
   text.textContent = 'Saving...';
-  
   btn.disabled = true;
 });
 
-
-// Show existing Django messages as notifications on page load
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+  // Django messages to notifications
   const messageElements = document.querySelectorAll('.messages .message');
   messageElements.forEach(messageEl => {
     const messageType = messageEl.classList.contains('error') ? 'error' : 'success';
@@ -440,6 +713,12 @@ document.addEventListener('DOMContentLoaded', function() {
       messageEl.style.display = 'none';
     }
   });
+
+  // Attach video file listeners
+  attachVideoFileListeners();
+  
+  // Calculate initial total from existing videos
+  updateTotalHours();
 });
 </script>
 {% endblock content %}
