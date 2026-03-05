@@ -10,10 +10,11 @@ class DropboxStorage(Storage):
 
     def __init__(self):
         self.client = dropbox.Dropbox(
-    oauth2_refresh_token=settings.DROPBOX_REFRESH_TOKEN,
-    app_key=settings.DROPBOX_APP_KEY,
-    app_secret=settings.DROPBOX_APP_SECRET
-)
+            oauth2_refresh_token=settings.DROPBOX_REFRESH_TOKEN,
+            app_key=settings.DROPBOX_APP_KEY,
+            app_secret=settings.DROPBOX_APP_SECRET
+        )
+
 
     # 🔥 FIXED: Supports Large File Upload (Chunk Upload)
     def _save(self, name, content):
