@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 from dropbox.files import WriteMode
+from django.core.files.base import ContentFile
+
 
 @deconstructible
 class DropboxStorage(Storage):
@@ -15,14 +17,16 @@ class DropboxStorage(Storage):
             app_secret=settings.DROPBOX_APP_SECRET
         )
 
+    # Ensure clean path
+    def _clean_path(self, name):
+        return f"/{name}".replace("//", "/")
 
-    # 🔥 FIXED: Supports Large File Upload (Chunk Upload)
+    # 🔥 Upload file (supports large files)
     def _save(self, name, content):
-        path = f"/{name}"
+        path = self._clean_path(name)
         file_size = content.size
         CHUNK_SIZE = 4 * 1024 * 1024  # 4MB
 
-        # Reset pointer just in case
         content.seek(0)
 
         if file_size <= CHUNK_SIZE:
@@ -38,7 +42,7 @@ class DropboxStorage(Storage):
 
             cursor = dropbox.files.UploadSessionCursor(
                 session_id=upload_session_start_result.session_id,
-                offset=content.tell(),
+                offset=content.tell()
             )
 
             commit = dropbox.files.CommitInfo(
@@ -51,39 +55,54 @@ class DropboxStorage(Storage):
                     self.client.files_upload_session_finish(
                         content.read(CHUNK_SIZE),
                         cursor,
-                        commit,
+                        commit
                     )
                 else:
                     self.client.files_upload_session_append_v2(
                         content.read(CHUNK_SIZE),
-                        cursor,
+                        cursor
                     )
                     cursor.offset = content.tell()
 
         return name
 
+    # 🔥 Fix overwrite behavior
+    def get_available_name(self, name, max_length=None):
+        if self.exists(name):
+            self.delete(name)
+        return name
+
     # Check if file exists
     def exists(self, name):
+        path = self._clean_path(name)
         try:
-            self.client.files_get_metadata(f"/{name}")
+            self.client.files_get_metadata(path)
             return True
         except dropbox.exceptions.ApiError:
             return False
 
-    # Open file (Important for MoviePy duration extraction)
+    # Open file
     def open(self, name, mode='rb'):
-        metadata, res = self.client.files_download(f"/{name}")
-        from django.core.files.base import ContentFile
+        path = self._clean_path(name)
+        metadata, res = self.client.files_download(path)
         return ContentFile(res.content)
 
-    # Generate Temporary URL (4 hours validity)
+    # Generate temporary URL (4 hours)
     def url(self, name):
-        link = self.client.files_get_temporary_link(f"/{name}")
+        path = self._clean_path(name)
+        link = self.client.files_get_temporary_link(path)
         return link.link
 
-    # Optional: Delete file
+    # Delete file
     def delete(self, name):
+        path = self._clean_path(name)
         try:
-            self.client.files_delete_v2(f"/{name}")
+            self.client.files_delete_v2(path)
         except dropbox.exceptions.ApiError:
             pass
+
+    # File size (required for some libraries)
+    def size(self, name):
+        path = self._clean_path(name)
+        metadata = self.client.files_get_metadata(path)
+        return metadata.size

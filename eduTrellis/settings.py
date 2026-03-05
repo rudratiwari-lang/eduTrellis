@@ -188,6 +188,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://web-production-ab46.up.railway.app",
 ]
 
+DEFAULT_FILE_STORAGE = "edutrellis.dropbox_storage.DropboxStorage"
+
 DROPBOX_APP_KEY = "wgg2fsw5pf16x8q"
 DROPBOX_APP_SECRET = "38dg9gi6djz3zuu"
 DROPBOX_REFRESH_TOKEN = "Si57f7yXuB0AAAAAAAAAAZGrsYbd1YLQpvGHxlJES4DRvKr7mDfZo8xqLaJBTY_s"
