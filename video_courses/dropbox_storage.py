@@ -90,8 +90,12 @@ class DropboxStorage(Storage):
     # Generate temporary URL (4 hours)
     def url(self, name):
         path = self._clean_path(name)
-        link = self.client.files_get_temporary_link(path)
-        return link.link
+
+        try:
+            link = self.client.files_get_temporary_link(path)
+            return link.link
+        except Exception:
+            return ""
 
     # Delete file
     def delete(self, name):
