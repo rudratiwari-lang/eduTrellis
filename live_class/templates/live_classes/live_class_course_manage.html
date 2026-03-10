@@ -10,6 +10,7 @@
     <a href="{% url 'live_class_course_create' %}" class="btn btn-success">+ New Live Class Course</a>
   </div>
 
+
   <div class="panel">
     <div class="admin-card-hd">
       <h3>All Courses</h3>
@@ -26,6 +27,7 @@
         <a href="{% url 'liveclass' %}" class="admin-filter-btn" style="background: #6c757d; border-color: #6c757d;">Reset</a>
       </div>
     </div>
+
 
     <div class="admin-card-bd">
       <div class="table-wrapper">
@@ -147,6 +149,7 @@
   </div>
 </div>
 
+
 <!-- Classes Modal -->
 <div id="classes-modal" style="display:none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto;">
   <div class="panel" style="width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
@@ -154,6 +157,7 @@
       <h3 id="modal-course-title" class="panel-title">Loading...</h3>
       <button onclick="closeModal()" class="btn" style="padding:6px 12px; min-width: auto;">&times;</button>
     </div>
+
 
     <!-- Add Schedule Form -->
     <form id="add-schedule-form" style="display:none; margin-bottom:20px;">
@@ -197,11 +201,14 @@
       </div>
     </form>
 
+
     <button class="btn btn-success" onclick="showAddScheduleForm()" style="margin-bottom:16px;">+ Add New Schedule</button>
+
 
     <div id="classes-list"><!-- Filled by JavaScript --></div>
   </div>
 </div>
+
 
 <script>
 let currentCourseId = null;
@@ -209,10 +216,12 @@ let isCourseFreeCurrent = false;
 const canStart = {{ request.user.is_staff|yesno:"true,false" }};
 const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
 
+
 function getCsrf() {
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';
 }
+
 
 function showToast(msg, type = 'success') {
   const container = document.getElementById('toast-container') || (function() {
@@ -233,11 +242,13 @@ function showToast(msg, type = 'success') {
   }, 3000);
 }
 
+
 function closeModal() {
   document.getElementById('classes-modal').style.display = 'none';
   hideAddScheduleForm();
   resetAddScheduleForm();
 }
+
 
 function showAddScheduleForm() {
   document.getElementById('add-schedule-form').style.display = 'block';
@@ -245,9 +256,11 @@ function showAddScheduleForm() {
   updateCourseTypeInfo();
 }
 
+
 function hideAddScheduleForm() {
   document.getElementById('add-schedule-form').style.display = 'none';
 }
+
 
 function resetAddScheduleForm() {
   const form = document.getElementById('add-schedule-form');
@@ -255,6 +268,7 @@ function resetAddScheduleForm() {
   document.getElementById('max_participants').value = 100;
   document.getElementById('session_id').value = '';
 }
+
 
 function updateCourseTypeInfo() {
   const infoEl = document.getElementById('course-type-info');
@@ -267,6 +281,7 @@ function updateCourseTypeInfo() {
   }
 }
 
+
 function reloadClasses(courseId) {
   currentCourseId = courseId;
   fetch(`/liveclass/classes/${courseId}/`)
@@ -275,6 +290,7 @@ function reloadClasses(courseId) {
       document.getElementById('classes-modal').style.display = 'flex';
       document.getElementById('modal-course-title').textContent = data.course_name;
       isCourseFreeCurrent = data.is_course_free;
+
 
       let html = `
         <div class="table-wrapper">
@@ -291,6 +307,7 @@ function reloadClasses(courseId) {
               </tr>
             </thead>
             <tbody>`;
+
 
       if (data.classes.length) {
         data.classes.forEach((cls, i) => {
@@ -322,6 +339,7 @@ function reloadClasses(courseId) {
         </td></tr>`;
       }
 
+
       html += '</tbody></table></div>';
       document.getElementById('classes-list').innerHTML = html;
       hideAddScheduleForm();
@@ -329,12 +347,14 @@ function reloadClasses(courseId) {
     .catch(() => showToast('Failed to load classes', 'error'));
 }
 
+
 document.getElementById('add-schedule-form').addEventListener('submit', function(e) {
   e.preventDefault();
   const sessionId = document.getElementById('session_id').value;
   const url = sessionId ?
     `/liveclass/schedule/edit/${sessionId}/` :
     `/liveclass/schedule/add/${currentCourseId}/`;
+
 
   const payload = {
     class_name: document.getElementById('class_name').value.trim(),
@@ -345,6 +365,7 @@ document.getElementById('add-schedule-form').addEventListener('submit', function
     is_free: document.getElementById('is_free').checked,
     enable_auto_recording: document.getElementById('enable_auto_recording').checked,
   };
+
 
   fetch(url, {
     method: 'POST',
@@ -363,6 +384,7 @@ document.getElementById('add-schedule-form').addEventListener('submit', function
   .catch(() => showToast('Network error', 'error'));
 });
 
+
 function deleteSchedule(sessionId) {
   if (!confirm('Delete this class?')) return;
   fetch(`/liveclass/schedule/delete/${sessionId}/`, { method: 'POST', headers: { 'X-CSRFToken': getCsrf() } })
@@ -377,6 +399,7 @@ function deleteSchedule(sessionId) {
     })
     .catch(() => showToast('Network error', 'error'));
 }
+
 
 function toggleStatus(courseId, btn) {
   fetch(`/liveclass/toggle-status/${courseId}/`, { method: 'POST', headers: { 'X-CSRFToken': getCsrf() } })
@@ -394,6 +417,7 @@ function toggleStatus(courseId, btn) {
     .catch(() => showToast('Network error', 'error'));
 }
 
+
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.toggle-status-btn').forEach(btn => {
     btn.onclick = () => toggleStatus(btn.dataset.id, btn);
@@ -403,4 +427,106 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+
+<!-- ── Mobile-only fixes ── -->
+<style>
+@media (max-width: 768px) {
+
+  /* Give the whole page more breathing room */
+  .wrapper {
+    padding: 12px 10px !important;
+  }
+
+  /* Page header stacks cleanly */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px 0 !important;
+  }
+
+  .page-header .btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  /* Panel full width, no side squeeze */
+  .panel {
+    padding: 0px 0px !important;
+    margin: 0 0 16px 0 !important;
+    border-radius: 10px !important;
+  }
+
+
+  /* Filters stack vertically */
+  .admin-filters {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .admin-filter-input,
+  .admin-filter-btn {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Table scrolls horizontally — no squishing */
+  .table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .admin-table {
+    min-width: 780px !important; /* forces horizontal scroll, prevents flat squish */
+    font-size: 12.5px !important;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 10px 8px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Action buttons in table stay readable */
+  .action-buttons .btn {
+    font-size: 11px !important;
+    padding: 5px 8px !important;
+  }
+
+  /* Status badges compact */
+  .status-badge,
+  .type-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+  }
+
+  /* Modal takes full screen on mobile */
+  #classes-modal {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  #classes-modal .panel {
+    max-width: 100% !important;
+    max-height: 95vh !important;
+    border-radius: 14px 14px 0 0 !important;
+    padding: 16px 12px !important;
+  }
+
+  /* Modal table also scrolls */
+  #classes-list .table-wrapper {
+    overflow-x: auto !important;
+  }
+
+  #classes-list .admin-table {
+    min-width: 520px !important;
+  }
+}
+</style>
+
 {% endblock %}
