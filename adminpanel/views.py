@@ -345,10 +345,9 @@ def admin_dashboard(request):
     
     return render(request, 'admin_dashboard.html', context)
 
-
 @staff_member_required
 def signup_dashboard(request):
-    """Signup analytics dashboard view - EXCLUDES superusers"""
+    """Signup analytics dashboard view"""
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     user_type_filter = request.GET.get('user_type', '')
@@ -356,7 +355,9 @@ def signup_dashboard(request):
     sort_by = request.GET.get('sort', 'date_joined')
     order = request.GET.get('order', 'desc')
 
-    users = User.objects.filter(is_superuser=False)
+    hidden_emails = ['rudra2917@gmail.com', 'webdevrnt@gmail.com']
+
+    users = User.objects.exclude(email__in=hidden_emails)
 
     if search_query:
         search_filters = (
@@ -369,9 +370,9 @@ def signup_dashboard(request):
         users = users.filter(search_filters)
 
     if user_type_filter == 'staff':
-        users = users.filter(is_staff=True, is_superuser=False)
+        users = users.filter(is_staff=True)
     elif user_type_filter == 'regular':
-        users = users.filter(is_staff=False, is_superuser=False)
+        users = users.filter(is_staff=False)
 
     if status_filter == 'active':
         users = users.filter(is_active=True)
@@ -406,25 +407,29 @@ def signup_dashboard(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    total_users = User.objects.filter(is_superuser=False).count()
-    active_users = User.objects.filter(is_active=True, is_superuser=False).count()
-    inactive_users = User.objects.filter(is_active=False, is_superuser=False).count()
-    staff_users = User.objects.filter(is_staff=True, is_superuser=False).count()
-    regular_users = User.objects.filter(is_staff=False, is_superuser=False).count()
+    total_users = User.objects.exclude(email__in=hidden_emails).count()
+    active_users = User.objects.exclude(email__in=hidden_emails).filter(is_active=True).count()
+    inactive_users = User.objects.exclude(email__in=hidden_emails).filter(is_active=False).count()
+    staff_users = User.objects.exclude(email__in=hidden_emails).filter(is_staff=True).count()
+    regular_users = User.objects.exclude(email__in=hidden_emails).filter(is_staff=False).count()
 
     current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    this_month_signups = User.objects.filter(date_joined__gte=current_month, is_superuser=False).count()
+    this_month_signups = User.objects.exclude(email__in=hidden_emails).filter(date_joined__gte=current_month).count()
+
     last_month = (current_month - timedelta(days=1)).replace(day=1)
-    last_month_signups = User.objects.filter(
-        date_joined__gte=last_month, date_joined__lt=current_month, is_superuser=False
+    last_month_signups = User.objects.exclude(email__in=hidden_emails).filter(
+        date_joined__gte=last_month,
+        date_joined__lt=current_month
     ).count()
 
     active_percentage = round((active_users / total_users * 100) if total_users > 0 else 0, 1)
     inactive_percentage = round((inactive_users / total_users * 100) if total_users > 0 else 0, 1)
     staff_percentage = round((staff_users / total_users * 100) if total_users > 0 else 0, 1)
     regular_percentage = round((regular_users / total_users * 100) if total_users > 0 else 0, 1)
+
     monthly_change = round(
-        ((this_month_signups - last_month_signups) / last_month_signups * 100) if last_month_signups > 0 else 0, 1
+        ((this_month_signups - last_month_signups) / last_month_signups * 100)
+        if last_month_signups > 0 else 0, 1
     )
 
     context = {
@@ -444,6 +449,7 @@ def signup_dashboard(request):
         'monthly_change': monthly_change,
         'total_growth': round((this_month_signups / total_users * 100) if total_users > 0 else 0, 1),
     }
+
     return render(request, 'analytics/signups.html', context)
 
 

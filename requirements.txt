@@ -9,7 +9,7 @@ idna==3.11
 imageio==2.37.0
 imageio-ffmpeg==0.6.0
 moviepy==1.0.3
-numpy==1.26.4
+numpy
 packaging==26.0
 pillow==12.0.0
 psycopg2-binary==2.9.11

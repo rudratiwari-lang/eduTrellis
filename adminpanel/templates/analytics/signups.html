@@ -1,6 +1,7 @@
 {% extends "admin_dashboard.html" %}
 {% load static %}
 
+
 {% block content %}
 <main class="">
   <div class="page-header">
@@ -55,6 +56,7 @@
     </div>
   </section>
 
+
   <!-- User Details Table -->
   <section class="admin-card">
     <div class="admin-card-hd">
@@ -92,13 +94,14 @@
               <option value="year" {% if request.GET.date_range == 'year' %}selected{% endif %}>This Year</option>
             </select>
           </div>
-          <div class="filter-group">
-            <button type="submit" class="admin-btn admin-btn-primary"><i class="fas fa-search"></i> Search</button>
-            <a href="{% url 'signupdashboard' %}" class="admin-btn admin-btn-secondary"><i class="fas fa-sync"></i> Clear</a>
+          <div class="filter-group filter-actions">
+            <button type="submit" class="filter-search-btn"><i class="fas fa-search"></i> Search</button>
+            <a href="{% url 'signupdashboard' %}" class="filter-clear-btn"><i class="fas fa-sync-alt"></i> Clear</a>
           </div>
         </div>
       </form>
     </div>
+
 
     <div class="admin-card-bd">
       <div class="table-wrapper">
@@ -276,15 +279,14 @@
   </section>
 </main>
 
+
 <script>
-// Copy to clipboard
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
     showToast('Copied to clipboard!');
   });
 }
 
-// Show toast notification
 function showToast(message) {
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -300,15 +302,10 @@ function showToast(message) {
     z-index: 10000;
     animation: slideIn 0.3s ease;
   `;
-  
   document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+  setTimeout(() => { toast.remove(); }, 3000);
 }
 
-// Add CSS animation
 const style = document.createElement('style');
 style.textContent = `
   @keyframes slideIn {
@@ -318,5 +315,133 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 </script>
+
+
+<style>
+/* ── Filter row layout ───────────────────────────── */
+.filter-form { width: 100%; }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #f9f9fb;
+  border-radius: 10px;
+  border: 1px solid #ececec;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 160px;
+}
+
+.filter-group:first-child {
+  flex: 2;
+  min-width: 220px;
+}
+
+.filter-actions {
+  flex: 0 0 auto !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: unset !important;
+}
+
+/* Search input */
+.admin-filter-input {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #333;
+  background: #fff;
+  outline: none;
+  transition: border-color .2s;
+  box-sizing: border-box;
+}
+.admin-filter-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,.08);
+}
+
+/* Dropdowns */
+.admin-filter-select {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #444;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+  box-sizing: border-box;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+.admin-filter-select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,.08);
+}
+
+/* Search button */
+.filter-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s, transform .15s;
+  white-space: nowrap;
+}
+.filter-search-btn:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+/* Clear link */
+.filter-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 14px;
+  background: transparent;
+  color: #7c3aed;
+  border: 1.5px solid #7c3aed;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .2s, color .2s, transform .15s;
+  white-space: nowrap;
+}
+.filter-clear-btn:hover {
+  background: #7c3aed;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filter-row     { flex-direction: column; }
+  .filter-group,
+  .filter-group:first-child { flex: 1 1 100%; min-width: 100%; }
+  .filter-actions { width: 100%; justify-content: flex-start; }
+}
+</style>
 
 {% endblock content %}

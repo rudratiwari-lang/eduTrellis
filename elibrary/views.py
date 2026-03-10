@@ -217,62 +217,60 @@ def elibrary_course_detail(request, pk):
 def elibrary_course_delete(request, pk):
     """Delete a course and its associated files."""
     course = get_object_or_404(ELibraryCourse, pk=pk)
-    
+
     if request.method == 'POST':
         try:
             # Store course title before deletion
             course_title = course.title
             pdf_count = course.pdfs.count()
-            
+
             # Delete associated PDF files
             deleted_files = 0
             for pdf in course.pdfs.all():
                 if pdf.file:
                     try:
-                        if os.path.exists(pdf.file.path):
-                            os.remove(pdf.file.path)
-                            deleted_files += 1
-                    except OSError as e:
+                        pdf.file.delete(save=False)
+                        deleted_files += 1
+                    except Exception:
                         messages.warning(
                             request,
                             f'⚠ Could not delete file: {pdf.title}',
                             extra_tags='warning'
                         )
-            
+
             # Delete cover image
             if course.cover_image:
                 try:
-                    if os.path.exists(course.cover_image.path):
-                        os.remove(course.cover_image.path)
-                except OSError:
+                    course.cover_image.delete(save=False)
+                except Exception:
                     pass
-            
+
             # Delete preview PDF
             if course.preview_pdf:
                 try:
-                    if os.path.exists(course.preview_pdf.path):
-                        os.remove(course.preview_pdf.path)
-                except OSError:
+                    course.preview_pdf.delete(save=False)
+                except Exception:
                     pass
-            
+
             # Delete the course
             course.delete()
-            
+
             messages.success(
-                request, 
+                request,
                 f'✓ Course "{course_title}" has been deleted successfully! '
                 f'({deleted_files}/{pdf_count} PDF files removed)',
                 extra_tags='success'
             )
+
             return redirect('elibrary_manage')
-            
+
         except Exception as e:
             messages.error(
                 request,
                 f'✗ Error deleting course: {str(e)}',
                 extra_tags='danger'
             )
-    
+
     return redirect('elibrary_course_detail', pk=pk)
 
 
@@ -408,8 +406,8 @@ def elibrary_pdf_delete(request, pk):
             # Delete the physical file
             if pdf.file:
                 try:
-                    if os.path.exists(pdf.file.path):
-                        os.remove(pdf.file.path)
+                    if pdf.file:
+                      pdf.file.delete(save=False)
                 except OSError as e:
                     messages.warning(
                         request,

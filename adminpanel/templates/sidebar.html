@@ -66,10 +66,22 @@
       </a>
     </div>
       
-    <!-- E-Library -->
-    <a href="{% url 'elibrary_manage' %}" class="{% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_create,elibrary_course_detail,elibrary_course_edit,elibrary_course_delete,elibrary_toggle_course_status,elibrary_pdf_upload_multiple,elibrary_pdf_manage,elibrary_analytics' %}admin-active{% endif %}">
-      <span class="admin-ico"><i class="fas fa-book" style="color: #795548;"></i></span><span>E-Library</span>
-    </a>
+ <!-- E-Library -->
+<a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_create,elibrary_course_detail,elibrary_course_edit,elibrary_course_delete,elibrary_toggle_course_status,elibrary_pdf_upload_multiple,elibrary_pdf_delete' %}admin-open{% endif %}">
+  <span class="admin-ico"><i class="fas fa-book" style="color: #795548;"></i></span><span>E-Library</span>
+</a>
+
+<div class="admin-submenu" {% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_create,elibrary_course_detail,elibrary_course_edit,elibrary_course_delete,elibrary_toggle_course_status,elibrary_pdf_upload_multiple,elibrary_pdf_delete' %}style="display:flex;"{% endif %}>
+
+  <a href="{% url 'elibrary_manage' %}" class="{% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_detail,elibrary_course_edit' %}admin-active{% endif %}">
+    <span class="admin-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Courses
+  </a>
+
+  <a href="{% url 'elibrary_course_create' %}" class="{% if request.resolver_match.url_name == 'elibrary_course_create' %}admin-active{% endif %}">
+    <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Course
+  </a>
+
+</div>
 
     <!-- Product Bundling -->
     <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'bundle_manage,bundle_create,bundle_edit,bundle_detail,bundle_delete,bundle_toggle_status,bundle_toggle_featured,bundle_enrollments,bundle_analytics' %}admin-open{% endif %}">
