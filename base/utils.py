@@ -3,6 +3,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
 import logging
+import socket
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +68,9 @@ def restore_smtp_settings(original_settings):
             setattr(settings, setting, value)
 
 
-def send_otp_email(user, otp_code):
+def send_otp_email(user, otp_code, timeout=10):
     """
-    Send OTP verification email.
-
-    Returns (success_bool, message).
+    Send OTP with short timeout for mobile.
     """
     smtp_config = get_active_smtp_config()
     if not smtp_config:
@@ -81,12 +80,7 @@ def send_otp_email(user, otp_code):
 
     try:
         subject = "Email Verification - OTP Code"
-
-        context = {
-            "user": user,
-            "otp_code": otp_code,
-            "site_name": "Your Site Name",  # customise
-        }
+        context = {"user": user, "otp_code": otp_code, "site_name": "Your Site"}
 
         try:
             html_message = render_to_string("emails/otp_verification.html", context)
@@ -95,17 +89,14 @@ def send_otp_email(user, otp_code):
 
         plain_message = f"""
 Hello {user.first_name or user.email},
-
-Your OTP for email verification is: {otp_code}
-
-This OTP will expire in 10 minutes.
-
-If you didn't request this, please ignore this email.
-
+Your OTP is: {otp_code}
+This OTP expires in 10 minutes.
 Thanks,
 Your Site Team
         """
 
+        # SHORT TIMEOUT for mobile
+        socket.setdefaulttimeout(timeout)
         send_mail(
             subject=subject,
             message=plain_message,
@@ -119,37 +110,38 @@ Your Site Team
 
     except Exception as e:
         logger.error(f"Failed to send OTP email: {str(e)}")
-        return False, f"Failed to send email: {str(e)}"
-
+        return False, f"Email failed: {str(e)}"
     finally:
         restore_smtp_settings(original_settings)
+        socket.setdefaulttimeout(None)  # reset timeout
 
 
-def create_and_send_otp(user, verification_type="email"):
+def create_and_send_otp(user, verification_type="email", is_mobile=False):
     """
-    Create OTPVerification and send via email.
-
-    Returns (otp_obj_or_None, message).
+    Skip email entirely on mobile for speed.
     """
     from base.models import OTPVerification
 
-    # Deactivate previous OTPs
     OTPVerification.objects.filter(
         user=user,
         verification_type=verification_type,
     ).update(is_used=True)
 
-    # Create new OTP
     otp = OTPVerification.objects.create(
         user=user,
         verification_type=verification_type,
     )
 
-    # Send email
-    success, message = send_otp_email(user, otp.otp_code)
+    # MOBILE: Skip email, just create OTP in DB
+    if is_mobile:
+        logger.info("Mobile signup: skipping email for speed")
+        return otp, "OTP created (email skipped for mobile)"
+
+    # DESKTOP: Send email with 10s timeout
+    success, message = send_otp_email(user, otp.otp_code, timeout=10)
 
     if not success:
-        otp.delete()  # Clean up if email failed
+        otp.delete()
         return None, message
 
     return otp, message

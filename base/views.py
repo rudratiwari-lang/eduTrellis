@@ -2040,72 +2040,103 @@ def logout_view(request):
 
 
 
+def is_mobile_request(request):
+    """
+    Fast mobile detection by User-Agent (no regex).
+    """
+    ua = request.META.get("HTTP_USER_AGENT", "").lower()
+    mobile_keywords = ["mobile", "android", "iphone", "ipad", "blackberry", "windows phone"]
+    return any(keyword in ua for keyword in mobile_keywords)
+
+
 @csrf_protect
 def signup_view(request):
     """
-    Bulletproof signup: always redirects, never gets stuck or shows 500.
+    SPEED-OPTIMIZED signup:
+    - MOBILE: <1s direct login (no email)
+    - DESKTOP: OTP verification (10s SMTP timeout)
+    - NO SMTP: Instant direct login
+    - ANY ERROR: Clean fallback to login
     """
     if request.method == "POST":
         form = SignupForm(request.POST, request.FILES)
 
         if form.is_valid():
+            # SPEED CHECK 1: Mobile detection
+            is_mobile = is_mobile_request(request)
             smtp_configured = has_smtp_configured()
-            logger.debug("SMTP OK? %s", smtp_configured)
+            
+            logger.debug("Mobile=%s, SMTP=%s", is_mobile, smtp_configured)
 
-            try:
-                with transaction.atomic():
-                    if smtp_configured:
-                        # TRY OTP flow
-                        user = form.save(commit=False)
-                        user.is_active = False
-                        # Comment if no is_verified field:
-                        # user.is_verified = False
-                        user.save()
-
-                        otp, message = create_and_send_otp(user)
-
-                        if otp:
-                            # SUCCESS: OTP sent
-                            request.session["pending_user_id"] = user.id
-                            messages.success(
-                                request,
-                                "Account created! Check your email for verification code."
-                            )
-                            return redirect("verify_otp")
-                        else:
-                            # OTP failed: delete user, go back
-                            user.delete()
-                            messages.error(
-                                request,
-                                f"Failed to send verification email: {message}"
-                            )
-                            return redirect("signup")
-
+            # SPEED PATH 1: MOBILE or NO SMTP → INSTANT LOGIN (no DB/email wait)
+            if is_mobile or not smtp_configured:
+                try:
+                    user = form.save(commit=True)
+                    logger.info("Fast signup: %s (mobile/no-smtp)", "mobile" if is_mobile else "no-smtp")
+                    
+                    if is_mobile:
+                        messages.success(
+                            request,
+                            "Account created instantly! Log in to continue."
+                        )
                     else:
-                        # No SMTP: direct login
-                        user = form.save(commit=True)
-                        # Comment if no is_verified field:
-                        # user.is_verified = True
                         messages.success(
                             request,
                             "Account created successfully. Please log in."
                         )
+                    return redirect("login")
+                    
+                except Exception as e:
+                    logger.error("Fast signup failed: %s", e)
+                    messages.error(
+                        request,
+                        "Signup failed. Please try logging in."
+                    )
+                    return redirect("login")
+
+            # SPEED PATH 2: DESKTOP + SMTP → OTP flow (with timeout)
+            try:
+                with transaction.atomic():
+                    user = form.save(commit=False)
+                    user.is_active = False
+                    # Comment if no is_verified field:
+                    # user.is_verified = False
+                    user.save()
+
+                    # 10s timeout email
+                    otp, message = create_and_send_otp(user, is_mobile=False)
+
+                    if otp:
+                        request.session["pending_user_id"] = user.id
+                        messages.success(
+                            request,
+                            "Account created! Check your email for verification code."
+                        )
+                        return redirect("verify_otp")
+                    else:
+                        # Email failed → fallback to login
+                        user.delete()
+                        logger.warning("OTP email failed, fallback to login")
+                        messages.error(
+                            request,
+                            f"Email failed ({message}). Logging in directly."
+                        )
                         return redirect("login")
 
             except Exception as e:
-                logger.exception("Signup error - redirecting to login")
+                logger.exception("OTP signup error - fallback to login")
                 messages.error(
                     request,
-                    "Account creation failed. Please try logging in or contact support."
+                    "Verification failed. You can log in directly."
                 )
-                return redirect("login")  # ALWAYS redirect to login on error
+                return redirect("login")
 
-        # Invalid form: show errors and stay on signup
-        messages.error(request, "Please fix the form errors below.")
+        # Invalid form (fast render)
+        messages.error(request, "Please fix the errors below.")
     else:
         form = SignupForm()
 
-    # GET request or invalid form: render form
+    # Render form page
     context = {
         "form": form,
         "smtp_configured": has_smtp_configured(),
