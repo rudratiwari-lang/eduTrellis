@@ -1,44 +1,59 @@
 # ==================== DJANGO CORE IMPORTS ====================
-from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse, FileResponse, HttpResponse, Http404, HttpResponseBadRequest
-from django.urls import reverse
-from django.utils import timezone
+from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.conf import settings
+from django.db import transaction
 from django.db.models import Count, Sum, Prefetch, Q, Avg
-from django.contrib.auth.hashers import make_password
+from django.http import (
+    JsonResponse,
+    FileResponse,
+    HttpResponse,
+    Http404,
+    HttpResponseBadRequest
+)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.cache import cache_control
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.views.decorators.http import require_http_methods, require_GET
+
+# ==================== THIRD PARTY IMPORTS ====================
 import razorpay
 
 # ==================== LOCAL APP IMPORTS ====================
 from .forms import (
-    EmailLoginForm, 
-    SignupForm, 
+    EmailLoginForm,
+    SignupForm,
     ProfileEditForm,
-    PasswordChangeSimpleForm, 
+    PasswordChangeSimpleForm,
     OTPVerificationForm
 )
+
 from .models import User, OTPVerification, UserCourseAccess, Payment
+
 from .utils import has_smtp_configured, create_and_send_otp
+
 from video_courses.models import VideoCourse, Category
 from live_class.models import LiveClassCourse, LiveClassSession
 from testseries.models import TestSeries, Test, TestAttempt, StudentAnswer
+
 from elibrary.models import (
-    ELibraryCourse, 
-    ELibraryPDF, 
-    ELibraryEnrollment, 
+    ELibraryCourse,
+    ELibraryPDF,
+    ELibraryEnrollment,
     ELibraryDownload
 )
+
 from adminpanel.models import (
-    ProductBundle, 
-    Coupon, 
-    UserCoupon, 
-    SMTPConfiguration, 
+    ProductBundle,
+    Coupon,
+    UserCoupon,
+    SMTPConfiguration,
     Notification as AdminNotification
 )
 
@@ -47,15 +62,10 @@ import json
 import os
 import secrets
 import string
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
-from django.http import HttpResponse, JsonResponse
-from django.views.decorators.http import require_GET
-from django.views.decorators.cache import cache_control
-from django.conf import settings
-from django.shortcuts import render
-import os
+logger = logging.getLogger(__name__)
 
 @require_GET
 @cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
@@ -2028,47 +2038,79 @@ def logout_view(request):
     messages.success(request, 'You have been logged out successfully.')
     return redirect('login')
 
-# Signup / OTP Verification
+
+
+@csrf_protect
 def signup_view(request):
-    """Handle user registration with optional OTP verification."""
-    if request.method == 'POST':
-        form = SignupForm(request.POST, request.FILES)  # Added request.FILES for image upload
+    """
+    Bulletproof signup: always redirects, never gets stuck or shows 500.
+    """
+    if request.method == "POST":
+        form = SignupForm(request.POST, request.FILES)
+
         if form.is_valid():
             smtp_configured = has_smtp_configured()
+            logger.debug("SMTP OK? %s", smtp_configured)
 
-            if smtp_configured:
-                # Create inactive user for OTP verification
-                user = form.save(commit=False)
-                user.is_active = False
-                user.is_verified = False
-                user.save()
+            try:
+                with transaction.atomic():
+                    if smtp_configured:
+                        # TRY OTP flow
+                        user = form.save(commit=False)
+                        user.is_active = False
+                        # Comment if no is_verified field:
+                        # user.is_verified = False
+                        user.save()
 
-                otp, message = create_and_send_otp(user)
-                if otp:
-                    request.session['pending_user_id'] = user.id
-                    messages.success(
-                        request,
-                        'Account created! Please check your email for verification code.'
-                    )
-                    return redirect('verify_otp')
-                else:
-                    user.delete()
-                    messages.error(request, f'Failed to send verification email: {message}')
-            else:
-                # No SMTP → activate immediately
-                user = form.save(commit=True)
-                user.is_verified = True
-                user.save()
-                messages.success(request, 'Account created successfully. Please log in.')
-                return redirect(reverse('login'))
+                        otp, message = create_and_send_otp(user)
+
+                        if otp:
+                            # SUCCESS: OTP sent
+                            request.session["pending_user_id"] = user.id
+                            messages.success(
+                                request,
+                                "Account created! Check your email for verification code."
+                            )
+                            return redirect("verify_otp")
+                        else:
+                            # OTP failed: delete user, go back
+                            user.delete()
+                            messages.error(
+                                request,
+                                f"Failed to send verification email: {message}"
+                            )
+                            return redirect("signup")
+
+                    else:
+                        # No SMTP: direct login
+                        user = form.save(commit=True)
+                        # Comment if no is_verified field:
+                        # user.is_verified = True
+                        messages.success(
+                            request,
+                            "Account created successfully. Please log in."
+                        )
+                        return redirect("login")
+
+            except Exception as e:
+                logger.exception("Signup error - redirecting to login")
+                messages.error(
+                    request,
+                    "Account creation failed. Please try logging in or contact support."
+                )
+                return redirect("login")  # ALWAYS redirect to login on error
+
+        # Invalid form: show errors and stay on signup
+        messages.error(request, "Please fix the form errors below.")
     else:
         form = SignupForm()
 
+    # GET request or invalid form: render form
     context = {
-        'form': form,
-        'smtp_configured': has_smtp_configured()
+        "form": form,
+        "smtp_configured": has_smtp_configured(),
     }
-    return render(request, 'signup.html', context)
+    return render(request, "signup.html", context)
 
 
 def verify_otp_view(request):
