@@ -9,14 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_active_smtp_config():
-    """
-    Get the active SMTP configuration that passed the test.
-    """
+    """Get active SMTP config that passed test_status='success'."""
     try:
         from adminpanel.models import SMTPConfiguration
         return SMTPConfiguration.objects.filter(
             is_active=True,
-            test_status='success',   # only use successfully tested config
+            test_status='success',
         ).first()
     except Exception as e:
         logger.error(f"Error getting SMTP configuration: {e}")
@@ -24,16 +22,12 @@ def get_active_smtp_config():
 
 
 def has_smtp_configured():
-    """
-    Check if SMTP is configured, active and tested successfully.
-    """
+    """Check if SMTP is ready to use."""
     return get_active_smtp_config() is not None
 
 
 def configure_smtp_settings(smtp_config):
-    """
-    Temporarily configure Django email settings from SMTP config.
-    """
+    """Temporarily configure Django email settings."""
     if not smtp_config:
         return False
 
@@ -60,18 +54,14 @@ def configure_smtp_settings(smtp_config):
 
 
 def restore_smtp_settings(original_settings):
-    """
-    Restore original Django email settings.
-    """
+    """Restore original Django email settings."""
     if original_settings:
         for setting, value in original_settings.items():
             setattr(settings, setting, value)
 
 
 def send_otp_email(user, otp_code, timeout=10):
-    """
-    Send OTP with short timeout for mobile.
-    """
+    """Send OTP email with configurable timeout."""
     smtp_config = get_active_smtp_config()
     if not smtp_config:
         return False, "No working SMTP configuration found."
@@ -95,7 +85,7 @@ Thanks,
 Your Site Team
         """
 
-        # SHORT TIMEOUT for mobile
+        # Apply timeout
         socket.setdefaulttimeout(timeout)
         send_mail(
             subject=subject,
@@ -113,32 +103,36 @@ Your Site Team
         return False, f"Email failed: {str(e)}"
     finally:
         restore_smtp_settings(original_settings)
-        socket.setdefaulttimeout(None)  # reset timeout
+        socket.setdefaulttimeout(None)  # Reset timeout
 
 
 def create_and_send_otp(user, verification_type="email", is_mobile=False):
-    """
-    Skip email entirely on mobile for speed.
-    """
+    """Create OTP + send email (fast timeout for mobile)."""
     from base.models import OTPVerification
 
+    # Deactivate previous OTPs
     OTPVerification.objects.filter(
         user=user,
         verification_type=verification_type,
     ).update(is_used=True)
 
+    # Create new OTP
     otp = OTPVerification.objects.create(
         user=user,
         verification_type=verification_type,
     )
 
-    # MOBILE: Skip email, just create OTP in DB
-    if is_mobile:
-        logger.info("Mobile signup: skipping email for speed")
-        return otp, "OTP created (email skipped for mobile)"
+    smtp_config = get_active_smtp_config()
+    
+    if not smtp_config:
+        # No SMTP: return OTP anyway
+        return otp, "No SMTP - direct login"
 
-    # DESKTOP: Send email with 10s timeout
-    success, message = send_otp_email(user, otp.otp_code, timeout=10)
+    # MOBILE: 3s timeout (ultra-fast)
+    # DESKTOP: 10s timeout
+    email_timeout = 3 if is_mobile else 10
+    
+    success, message = send_otp_email(user, otp.otp_code, timeout=email_timeout)
 
     if not success:
         otp.delete()

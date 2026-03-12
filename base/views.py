@@ -2039,11 +2039,8 @@ def logout_view(request):
     return redirect('login')
 
 
-
 def is_mobile_request(request):
-    """
-    Fast mobile detection by User-Agent (no regex).
-    """
+    """Fast mobile detection."""
     ua = request.META.get("HTTP_USER_AGENT", "").lower()
     mobile_keywords = ["mobile", "android", "iphone", "ipad", "blackberry", "windows phone"]
     return any(keyword in ua for keyword in mobile_keywords)
@@ -2052,60 +2049,71 @@ def is_mobile_request(request):
 @csrf_protect
 def signup_view(request):
     """
-    SPEED-OPTIMIZED signup:
-    - MOBILE: <1s direct login (no email)
-    - DESKTOP: OTP verification (10s SMTP timeout)
-    - NO SMTP: Instant direct login
-    - ANY ERROR: Clean fallback to login
+    ULTRA-FAST signup:
+    - MOBILE: 3s SMTP timeout → instant if fails
+    - DESKTOP: 10s SMTP timeout
+    - NO SMTP: <500ms direct login
+    - ANY ERROR: Clean redirect to login
     """
     if request.method == "POST":
         form = SignupForm(request.POST, request.FILES)
 
         if form.is_valid():
-            # SPEED CHECK 1: Mobile detection
             is_mobile = is_mobile_request(request)
             smtp_configured = has_smtp_configured()
             
             logger.debug("Mobile=%s, SMTP=%s", is_mobile, smtp_configured)
 
-            # SPEED PATH 1: MOBILE or NO SMTP → INSTANT LOGIN (no DB/email wait)
-            if is_mobile or not smtp_configured:
-                try:
-                    user = form.save(commit=True)
-                    logger.info("Fast signup: %s (mobile/no-smtp)", "mobile" if is_mobile else "no-smtp")
+            try:
+                with transaction.atomic():
+                    user = form.save(commit=False)
                     
-                    if is_mobile:
-                        messages.success(
-                            request,
-                            "Account created instantly! Log in to continue."
-                        )
-                    else:
+                    # PATH 1: No SMTP → INSTANT LOGIN
+                    if not smtp_configured:
+                        user.is_active = True
+                        # Comment if no is_verified:
+                        # user.is_verified = True
+                        user.save()
                         messages.success(
                             request,
                             "Account created successfully. Please log in."
                         )
-                    return redirect("login")
+                        return redirect("login")
                     
-                except Exception as e:
-                    logger.error("Fast signup failed: %s", e)
-                    messages.error(
-                        request,
-                        "Signup failed. Please try logging in."
-                    )
-                    return redirect("login")
-
-            # SPEED PATH 2: DESKTOP + SMTP → OTP flow (with timeout)
-            try:
-                with transaction.atomic():
-                    user = form.save(commit=False)
+                    # PATH 2: MOBILE + SMTP → FAST OTP (3s timeout)
+                    if is_mobile:
+                        user.is_active = False
+                        # Comment if no is_verified:
+                        # user.is_verified = False
+                        user.save()
+                        
+                        otp, message = create_and_send_otp(user, is_mobile=True)
+                        
+                        if otp:
+                            request.session["pending_user_id"] = user.id
+                            messages.success(
+                                request,
+                                "Account created! Check email for OTP (3s delivery)."
+                            )
+                            return redirect("verify_otp")
+                        else:
+                            # Fast fallback
+                            user.is_active = True
+                            user.save()
+                            messages.info(
+                                request,
+                                f"Email slow ({message}). Account activated anyway."
+                            )
+                            return redirect("login")
+                    
+                    # PATH 3: DESKTOP + SMTP → Full OTP (10s timeout)
                     user.is_active = False
-                    # Comment if no is_verified field:
+                    # Comment if no is_verified:
                     # user.is_verified = False
                     user.save()
-
-                    # 10s timeout email
+                    
                     otp, message = create_and_send_otp(user, is_mobile=False)
-
+                    
                     if otp:
                         request.session["pending_user_id"] = user.id
                         messages.success(
@@ -2114,29 +2122,26 @@ def signup_view(request):
                         )
                         return redirect("verify_otp")
                     else:
-                        # Email failed → fallback to login
                         user.delete()
-                        logger.warning("OTP email failed, fallback to login")
                         messages.error(
                             request,
-                            f"Email failed ({message}). Logging in directly."
+                            f"Failed to send email: {message}. Try login directly."
                         )
                         return redirect("login")
 
             except Exception as e:
-                logger.exception("OTP signup error - fallback to login")
+                logger.exception("Signup error - fallback to login")
                 messages.error(
                     request,
-                    "Verification failed. You can log in directly."
+                    "Something went wrong. You can log in directly."
                 )
                 return redirect("login")
 
-        # Invalid form (fast render)
-        messages.error(request, "Please fix the errors below.")
+        # Invalid form
+        messages.error(request, "Please fix the form errors below.")
     else:
         form = SignupForm()
 
-    # Render form page
     context = {
         "form": form,
         "smtp_configured": has_smtp_configured(),
