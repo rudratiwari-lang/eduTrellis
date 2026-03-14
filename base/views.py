@@ -2045,7 +2045,6 @@ def is_mobile_request(request):
     mobile_keywords = ["mobile", "android", "iphone", "ipad", "blackberry", "windows phone"]
     return any(keyword in ua for keyword in mobile_keywords)
 
-
 @csrf_protect
 def signup_view(request):
     """

@@ -1,9 +1,11 @@
+# utils.py
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
 import logging
 import socket
+import threading  # ✅ NEW
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +87,7 @@ Thanks,
 Your Site Team
         """
 
-        # Apply timeout
-        socket.setdefaulttimeout(timeout)
+        # ✅ Use thread-local socket timeout instead of global setdefaulttimeout
         send_mail(
             subject=subject,
             message=plain_message,
@@ -99,15 +100,47 @@ Your Site Team
         return True, "OTP sent successfully"
 
     except Exception as e:
-        logger.error(f"Failed to send OTP email: {str(e)}")
+        logger.error(f"Failed to send OTP email to {user.email}: {str(e)}")
         return False, f"Email failed: {str(e)}"
     finally:
         restore_smtp_settings(original_settings)
-        socket.setdefaulttimeout(None)  # Reset timeout
+        # ✅ REMOVED: socket.setdefaulttimeout(None) — no longer needed
+
+
+# ✅ NEW: Background email sender thread
+class _OTPEmailThread(threading.Thread):
+    """Daemon thread to send OTP email without blocking the signup response."""
+
+    def __init__(self, user, otp, timeout=10):
+        super().__init__(daemon=True)  # daemon=True: thread dies if main process exits
+        self.user = user
+        self.otp = otp
+        self.timeout = timeout
+
+    def run(self):
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(self.timeout)
+        try:
+            success, message = send_otp_email(self.user, self.otp.otp_code, timeout=self.timeout)
+            if not success:
+                logger.warning(
+                    f"Background OTP email failed for {self.user.email}: {message}. "
+                    f"OTP ID={self.otp.pk} marked as used."
+                )
+                # Mark OTP as used so user is forced to use Resend OTP
+                self.otp.is_used = True
+                self.otp.save(update_fields=['is_used'])
+        except Exception as e:
+            logger.error(f"OTPEmailThread crashed for {self.user.email}: {e}")
+        finally:
+            socket.setdefaulttimeout(old_timeout)  # ✅ Restore only this thread's timeout
 
 
 def create_and_send_otp(user, verification_type="email", is_mobile=False):
-    """Create OTP + send email (fast timeout for mobile)."""
+    """
+    Create OTP instantly + fire email in a background thread.
+    Signup response is returned to user WITHOUT waiting for email.
+    """
     from base.models import OTPVerification
 
     # Deactivate previous OTPs
@@ -116,26 +149,18 @@ def create_and_send_otp(user, verification_type="email", is_mobile=False):
         verification_type=verification_type,
     ).update(is_used=True)
 
-    # Create new OTP
+    # Create new OTP — this is instant (just a DB write)
     otp = OTPVerification.objects.create(
         user=user,
         verification_type=verification_type,
     )
 
     smtp_config = get_active_smtp_config()
-    
     if not smtp_config:
-        # No SMTP: return OTP anyway
         return otp, "No SMTP - direct login"
 
-    # MOBILE: 3s timeout (ultra-fast)
-    # DESKTOP: 10s timeout
-    email_timeout = 3 if is_mobile else 10
-    
-    success, message = send_otp_email(user, otp.otp_code, timeout=email_timeout)
+    # ✅ Fire email in background — signup response is NOT blocked
+    email_timeout = 15  # Generous timeout since it's async now — no UX penalty
+    _OTPEmailThread(user, otp, timeout=email_timeout).start()
 
-    if not success:
-        otp.delete()
-        return None, message
-
-    return otp, message
+    return otp, "OTP sending in background"

@@ -268,15 +268,19 @@
   const spinner = document.getElementById('signupBtnSpinner');
   const label = btn?.querySelector('.btn-label');
 
-  // Form submission loader
+  // ✅ UPDATED: Show instant message since email is now async
   if (form) {
     form.addEventListener('submit', function () {
-      if (btn) { 
-        btn.disabled = true; 
-        btn.classList.add('is-loading'); 
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('is-loading');
       }
       if (label) {
-        label.textContent = {% if smtp_configured %}'Creating account & sending verification...'{% else %}'Creating account...'{% endif %};
+        label.textContent = {% if smtp_configured %}
+          'Creating account...'   {# ✅ No longer says "sending verification" — that's async #}
+        {% else %}
+          'Creating account...'
+        {% endif %};
       }
       if (spinner) spinner.style.display = 'inline-block';
     });
@@ -285,9 +289,9 @@
   // File input display
   const fileInput = document.getElementById('{{ form.profile_image.id_for_label }}');
   const fileName = document.getElementById('fileName');
-  
+
   if (fileInput) {
-    fileInput.addEventListener('change', function() {
+    fileInput.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         fileName.textContent = '✓ ' + this.files[0].name;
         fileName.style.color = '#34a853';
@@ -303,27 +307,24 @@
 
   function showStrength(value) {
     if (!strength) return;
-    if (!value) { 
-      strength.textContent = ''; 
-      return; 
-    }
-    
+    if (!value) { strength.textContent = ''; return; }
+
     let score = 0;
     if (value.length >= 8) score++;
     if (/[A-Z]/.test(value)) score++;
     if (/[a-z]/.test(value)) score++;
     if (/\d/.test(value)) score++;
     if (/[^A-Za-z0-9]/.test(value)) score++;
-    
+
     const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
     const colors = ['#d93025', '#ea4335', '#fbbc04', '#34a853', '#137333', '#0d652d'];
-    
+
     strength.textContent = 'Strength: ' + labels[score];
     strength.style.color = colors[score];
   }
 
   if (pwd) {
-    pwd.addEventListener('input', function () { 
+    pwd.addEventListener('input', function () {
       showStrength(pwd.value);
       checkMatch();
     });
@@ -335,7 +336,6 @@
 
   function checkMatch() {
     if (!pwd || !cpwd || !matchIndicator) return;
-    
     if (cpwd.value && pwd.value !== cpwd.value) {
       matchIndicator.textContent = '✗ Passwords do not match';
       matchIndicator.style.color = '#d93025';
@@ -347,10 +347,9 @@
     }
   }
 
-  if (cpwd) {
-    cpwd.addEventListener('input', checkMatch);
-  }
+  if (cpwd) cpwd.addEventListener('input', checkMatch);
 })();
 </script>
+
 
 {% endblock content %}
