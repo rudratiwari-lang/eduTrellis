@@ -2192,50 +2192,6 @@ def verify_otp_view(request):
     return render(request, 'verify_otp.html', context)
 
 
-def verify_otp_view(request):
-    """Handle OTP verification for new users."""
-    user_id = request.session.get('pending_user_id')
-    if not user_id:
-        messages.error(request, 'No pending verification found.')
-        return redirect('signup')
-
-    user = get_object_or_404(User, id=user_id, is_active=False)
-
-    if request.method == 'POST':
-        form = OTPVerificationForm(user=user, data=request.POST)
-        if form.is_valid():
-            otp_code = form.cleaned_data['otp_code']
-            try:
-                otp = OTPVerification.objects.get(
-                    user=user,
-                    otp_code=otp_code,
-                    verification_type='email',
-                    is_used=False
-                )
-                if otp.is_valid():
-                    otp.is_used = True
-                    otp.save()
-
-                    user.is_active = True
-                    user.is_verified = True
-                    user.save()
-
-                    login(request, user)
-                    del request.session['pending_user_id']
-
-                    messages.success(request, 'Email verified successfully! Welcome.')
-                    return redirect('home')
-                else:
-                    messages.error(request, 'OTP has expired. Please request a new one.')
-            except OTPVerification.DoesNotExist:
-                messages.error(request, 'Invalid OTP code.')
-    else:
-        form = OTPVerificationForm(user=user)
-
-    context = {'form': form, 'user': user, 'can_resend': True}
-    return render(request, 'verify_otp.html', context)
-
-
 @require_http_methods(["POST"])
 def resend_otp_view(request):
     """Resend OTP via AJAX."""
